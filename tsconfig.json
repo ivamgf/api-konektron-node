@@ -11,7 +11,7 @@
     // "disableReferencedProjectLoad": true,             /* Reduce the number of projects loaded automatically by TypeScript. */
 
     /* Language and Environment */
-    "target": "es2016",                                  /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
+    "target": "ES2016",                                  /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
     // "lib": [],                                        /* Specify a set of bundled library declaration files that describe the target runtime environment. */
     // "jsx": "preserve",                                /* Specify what JSX code is generated. */
     // "experimentalDecorators": true,                   /* Enable experimental support for TC39 stage 2 draft decorators. */
@@ -97,7 +97,20 @@
     // "allowUnreachableCode": true,                     /* Disable error reporting for unreachable code. */
 
     /* Completeness */
-    // "skipDefaultLibCheck": true,                      /* Skip type checking .d.ts files that are included with TypeScript. */
-    "skipLibCheck": true                                 /* Skip type checking all .d.ts files. */
-  }
+    "skipDefaultLibCheck": true,                      /* Skip type checking .d.ts files that are included with TypeScript. */
+    "skipLibCheck": true,                   // Ignora verificação de tipos em arquivos de definição
+    "outDir": "./dist",                     // Diretório para os arquivos compilados
+    "rootDir": "./src",                     // Diretório raiz do código-fonte
+    "resolveJsonModule": true,              // Permite importação de arquivos JSON
+    "typeRoots": ["./node_modules/@types"]  // Diretórios onde procurar definições de tipos
+                                 /* Skip type checking all .d.ts files. */
+  },
+  "include": [
+    "src/**/*.ts"                              // Inclui todos os arquivos TypeScript no diretório src
+  ],
+  "exclude": [
+    "node_modules",                         // Exclui dependências
+    "dist",                                 // Exclui diretório de saída
+    "**/*.spec.ts"                          // Exclui arquivos de teste
+  ]
 }
