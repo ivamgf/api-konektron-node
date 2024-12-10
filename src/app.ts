@@ -9,7 +9,7 @@ import { config } from 'dotenv';
 
 // Importa rotas
 import indexRouter from './routes/index';
-import usersRouter from './routes/users';
+import usersRouter from './routes/userRoutes';
 
 const app = express();
 

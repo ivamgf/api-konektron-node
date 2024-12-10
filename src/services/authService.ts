@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
-import { getUserByEmail } from '../models/userModel';
-import { compare } from 'bcrypt';
+import { getUserByEmail } from '../models/userModel'; // Certifique-se de que está importando a função corretamente
+import { compare } from 'bcryptjs'; // Certifique-se de usar 'bcryptjs'
 import { JWT_SECRET } from '../config';
 
 export const validateUserCredentials = async (email: string, password: string) => {
