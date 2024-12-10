@@ -4,12 +4,19 @@ import path from 'path';
 import cookieParser from 'cookie-parser';
 import logger from 'morgan';
 import mysql, { Connection, MysqlError } from 'mysql';
+import authRoutes from './routes/authRoutes';
+import { config } from 'dotenv';
 
 // Importa rotas
 import indexRouter from './routes/index';
 import usersRouter from './routes/users';
 
 const app = express();
+
+config(); // Carrega as variáveis de ambiente
+
+console.log('Host do banco de dados:', process.env.DB_HOST);
+console.log('Usuário do banco de dados:', process.env.DB_USER);
 
 // Tipagem para configuração do banco de dados
 interface DbConfig {
@@ -29,13 +36,13 @@ declare global {
   }
 }
 
-// Configuração do banco de dados sem SSL
+// Configuração do banco de dados usando variáveis de ambiente
 const dbConfig: DbConfig = {
-  host: 'orkneytech.com.br', // Substitua pelo endereço do servidor
-  user: 'orkney10_konektron_admin',
-  password: '5oXFn{(Zyl7Z',
-  database: 'orkney10_konektron',
-  port: 3306,
+  host: process.env.DB_HOST || '', // Define um valor padrão vazio se não estiver definido
+  user: process.env.DB_USER || '',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || '',
+  port: Number(process.env.DB_PORT) || 3306, // Converte a porta para número
 };
 
 // Cria uma conexão com o banco de dados
@@ -66,6 +73,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/auth', authRoutes);
 
 // Configura rotas
 app.use('/', indexRouter);
@@ -80,7 +88,6 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.use((err: createError.HttpError, req: Request, res: Response, next: NextFunction) => {
   res.locals.message = err.message;
   res.locals.error = req.app.get('env') === 'development' ? err : {};
-
   res.status(err.status || 500);
   res.render('error');
 });
