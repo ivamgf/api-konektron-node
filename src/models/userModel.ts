@@ -1,3 +1,4 @@
+// userModel.ts
 import { Sequelize, DataTypes, Model } from 'sequelize';
 import bcrypt from 'bcryptjs'; // Certifique-se de que bcryptjs está instalado
 
