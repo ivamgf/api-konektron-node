@@ -4,8 +4,10 @@ import path from 'path';
 import cookieParser from 'cookie-parser';
 import logger from 'morgan';
 import mysql, { Connection, MysqlError } from 'mysql';
+import { Sequelize } from 'sequelize';
 import authRoutes from './routes/authRoutes';
 import { config } from 'dotenv';
+import { initUserModel } from './models/userModel';
 
 // Importa rotas
 import indexRouter from './routes/index';
@@ -36,19 +38,19 @@ declare global {
   }
 }
 
-// Configuração do banco de dados usando variáveis de ambiente
+// Configuração do banco de dados MySQL usando variáveis de ambiente
 const dbConfig: DbConfig = {
-  host: process.env.DB_HOST || '', // Define um valor padrão vazio se não estiver definido
+  host: process.env.DB_HOST || '',
   user: process.env.DB_USER || '',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || '',
-  port: Number(process.env.DB_PORT) || 3306, // Converte a porta para número
+  port: Number(process.env.DB_PORT) || 3306,
 };
 
-// Cria uma conexão com o banco de dados
+// Cria uma conexão com o banco de dados MySQL
 const dbConnection: Connection = mysql.createConnection(dbConfig);
 
-// Testa a conexão
+// Testa a conexão com o MySQL
 dbConnection.connect((err: MysqlError | null) => {
   if (err) {
     console.error('Erro ao conectar ao banco de dados:', err.message);
@@ -57,7 +59,26 @@ dbConnection.connect((err: MysqlError | null) => {
   }
 });
 
-// Middleware para adicionar a conexão ao objeto de solicitação
+// Configuração do Sequelize para o banco de dados
+const sequelize = new Sequelize(process.env.DB_NAME || '', process.env.DB_USER || '', process.env.DB_PASSWORD || '', {
+  host: process.env.DB_HOST,
+  dialect: 'mysql',
+});
+
+// Inicializa o modelo User com Sequelize
+initUserModel(sequelize);
+
+// Testa a conexão com o Sequelize
+(async () => {
+  try {
+    await sequelize.authenticate();
+    console.log('Conexão com o banco de dados via Sequelize estabelecida com sucesso.');
+  } catch (error) {
+    console.error('Erro ao conectar ao banco de dados com Sequelize:', error);
+  }
+})();
+
+// Middleware para adicionar a conexão MySQL ao objeto de solicitação
 app.use((req: Request, res: Response, next: NextFunction) => {
   req.dbConnection = dbConnection;
   next();
@@ -73,9 +94,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/auth', authRoutes);
 
 // Configura rotas
+app.use('/auth', authRoutes);
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 
@@ -94,13 +115,13 @@ app.use((err: createError.HttpError, req: Request, res: Response, next: NextFunc
 
 // Fecha a conexão ao encerrar a aplicação
 process.on('SIGINT', () => {
-  dbConnection.end((err:any) => {
+  dbConnection.end((err: any) => {
     if (err) {
       console.error('Erro ao encerrar a conexão com o banco de dados:', err.message);
     }
-    console.log('Conexão ao banco de dados encerrada.');
-    process.exit(0);
+    console.log('Conexão ao banco de dados MySQL encerrada.');
   });
+  process.exit(0);
 });
 
 export default app;
