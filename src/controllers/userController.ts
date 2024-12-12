@@ -1,6 +1,5 @@
-// userController.ts
 import { Request, Response } from 'express';
-import { createUser, enableUser, updateUserPassword } from '../services/userService';
+import { createUser, enableUser, updateUserPassword, getUsers, deleteUser } from '../services/userService';
 
 export const registerUser = async (req: Request, res: Response) => {
   const { email, password, type } = req.body;
@@ -39,6 +38,39 @@ export const changePassword = async (req: Request, res: Response) => {
     res.status(200).json({ message: 'Senha atualizada com sucesso.' });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Erro ao atualizar senha.';
+    res.status(500).json({ error: errorMessage });
+  }
+};
+
+/**
+ * Controlador para consultar usuários.
+ * Pode retornar todos os usuários ou um específico dependendo do parâmetro `userId`.
+ */
+export const queryUsers = async (req: Request, res: Response) => {
+  const { userId } = req.params;
+
+  try {
+    const result = userId ? await getUsers(Number(userId)) : await getUsers();
+    res.status(200).json(result);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Erro ao consultar usuário(s).';
+    res.status(500).json({ error: errorMessage });
+  }
+};
+
+// Nova função deleteUserController
+export const deleteUserController = async (req: Request, res: Response) => {
+  const { userId } = req.params;
+
+  try {
+    const user = await deleteUser(Number(userId));
+    if (user) {
+      res.status(200).json({ message: 'Usuário deletado com sucesso.' });
+    } else {
+      res.status(404).json({ error: 'Usuário não encontrado.' });
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Erro ao deletar usuário.';
     res.status(500).json({ error: errorMessage });
   }
 };
