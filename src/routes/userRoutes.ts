@@ -1,5 +1,7 @@
+// userRouter.ts
 import { Router, Request, Response } from 'express';
-import { registerUser, confirmUser, changePassword } from '../controllers/userController';
+import { registerUser, confirmUser, changePassword, queryUsers } from '../controllers/userController';
+import { login } from '../controllers/authController'; // Importe a função de login
 
 const router = Router();
 
@@ -18,6 +20,16 @@ router.get('/confirm/:userId', confirmUser);
 
 /** Update password */
 router.put('/password/:userId', changePassword);
+
+/** Rota para consultar usuários */
+router.get('/users/:userId?', queryUsers);
+
+router.get('/', (req, res) => {
+  res.send('Respondendo com um recurso de usuários');
+});
+
+/** Login Route */
+router.post('/login', login); // Adiciona a rota de login aqui
 
 /**
 * Basic route to check the operation of the users module.

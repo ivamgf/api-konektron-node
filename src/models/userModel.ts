@@ -10,6 +10,8 @@ export interface UserAttributes {
   enabled: boolean;
   dateCreate: Date;
   dateUpdate?: Date;
+  resetToken?: string | null; // Nova propriedade
+  resetTokenExpiration?: Date | null;
 }
 
 export class User extends Model<UserAttributes> implements UserAttributes {
@@ -20,6 +22,8 @@ export class User extends Model<UserAttributes> implements UserAttributes {
   public enabled!: boolean;
   public dateCreate!: Date;
   public dateUpdate?: Date;
+  public resetToken?: string | null; // Nova propriedade
+  public resetTokenExpiration?: Date | null; // Nova propriedade
 }
 
 // Função para inicializar o modelo User
@@ -53,6 +57,14 @@ export const initUserModel = (sequelize: Sequelize): void => {
         defaultValue: DataTypes.NOW,
       },
       dateUpdate: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      resetToken: { // Definição do token de recuperação
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      resetTokenExpiration: { // Definição da data de expiração
         type: DataTypes.DATE,
         allowNull: true,
       },
