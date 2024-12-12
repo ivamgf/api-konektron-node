@@ -8,6 +8,7 @@ import { Sequelize } from 'sequelize';
 import authRoutes from './routes/authRoutes';
 import { config } from 'dotenv';
 import { initUserModel } from './models/userModel';
+import profileRoutes from './routes/profileRoutes';
 
 // Importa rotas
 import indexRouter from './routes/index';
@@ -99,6 +100,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/auth', authRoutes);
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
+
+// Outros middlewares e configurações da aplicação
+app.use('/api', profileRoutes);
 
 // Lida com erros 404
 app.use((req: Request, res: Response, next: NextFunction) => {
