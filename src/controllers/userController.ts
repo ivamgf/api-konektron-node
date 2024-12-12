@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { createUser, enableUser, updateUserPassword, getUsers, deleteUser } from '../services/userService';
+import { Profile } from '../models/profileModel'; 
 
 export const registerUser = async (req: Request, res: Response) => {
   const { email, password, type } = req.body;
@@ -58,14 +59,22 @@ export const queryUsers = async (req: Request, res: Response) => {
   }
 };
 
-// Nova função deleteUserController
+/**
+ * Controlador para deletar um usuário e suas associações com idUserHaveProfile e idProfile.
+ */
 export const deleteUserController = async (req: Request, res: Response) => {
   const { userId } = req.params;
 
   try {
+    // Deleta as associações com idUserHaveProfile e idProfile antes de deletar o usuário
+    await Profile.destroy({
+      where: { userId: Number(userId) },
+    });
+
+    // Deleta o usuário
     const user = await deleteUser(Number(userId));
     if (user) {
-      res.status(200).json({ message: 'Usuário deletado com sucesso.' });
+      res.status(200).json({ message: 'Usuário e suas associações deletados com sucesso.' });
     } else {
       res.status(404).json({ error: 'Usuário não encontrado.' });
     }
