@@ -9,6 +9,7 @@ import authRoutes from './routes/authRoutes';
 import { config } from 'dotenv';
 import { initUserModel } from './models/userModel';
 import profileRoutes from './routes/profileRoutes';
+import analysisRoutes from "./routes/analisysRoutes";
 
 // Importa rotas
 import indexRouter from './routes/index';
@@ -100,6 +101,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/auth', authRoutes);
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
+app.use("/analysis", analysisRoutes);
 
 // Outros middlewares e configurações da aplicação
 app.use('/api', profileRoutes);

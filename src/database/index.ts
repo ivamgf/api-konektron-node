@@ -9,10 +9,10 @@ const sequelize = new Sequelize({
   password: 'password',
   database: 'your_database_name',
   pool: {
-    max: 5,
+    max: 30,
     min: 0,
     acquire: 30000,  // Tempo máximo de espera para adquirir uma conexão
-    idle: 10000,     // Tempo máximo de inatividade antes de liberar uma conexão
+    idle: 60000,     // Tempo máximo de inatividade antes de liberar uma conexão
   },
 });
 
