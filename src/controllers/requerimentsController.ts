@@ -1,18 +1,32 @@
 import { Request, Response } from "express";
 import { Requirements } from "../models/requerimentsModel";
+import { AnalisysHaveRequirements } from "../models/analisysHaveRequirementsModel";
 
 export class RequirementsController {
     static async createRequirement(req: Request, res: Response) {
-        try {
-            const data = req.body;
-            const requirement = await Requirements.create(data);
-            res.status(201).json(requirement);
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Erro ao criar o requisito.';
-            res.status(500).json({ error: errorMessage });
-        }
-    }
+            try {
+                const { idAnalisys, ...requirementData } = req.body;
 
+                if (!idAnalisys) {
+                    return res.status(400).json({ error: "idAnalisys is required." });
+                }
+
+                // Criação do requisito
+                const requirement = await Requirements.create(requirementData);
+
+                // Criação da associação na tabela AnalisysHaveRequirements
+                await AnalisysHaveRequirements.create({
+                    idAnalisys,
+                    idRequirements: requirement.idRequirements
+                });
+
+                res.status(201).json(requirement);
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : 'Erro ao criar o requisito.';
+                res.status(500).json({ error: errorMessage });
+            }
+        }
+    
     static async getAllRequirements(req: Request, res: Response) {
         try {
             const requirements = await Requirements.findAll();

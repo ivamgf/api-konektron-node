@@ -1,4 +1,5 @@
 import { Sequelize, DataTypes, Model } from "sequelize";
+import { AnalisysHaveRequirements } from "../models/analisysHaveRequirementsModel"
 
 export interface RequirementsAttributes {
     idRequirements: number;
@@ -64,5 +65,11 @@ export const initRequerimentsModel = (sequelize: Sequelize): void => {
             timestamps: false,
         }
     );
+
+    // Associações
+    Requirements.hasMany(AnalisysHaveRequirements, {
+        foreignKey: "idRequirements",
+        as: "analisysAssociations",
+    });
 }
 

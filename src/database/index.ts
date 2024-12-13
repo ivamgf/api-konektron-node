@@ -1,5 +1,7 @@
 // Configuração principal do Sequelize
 import { Sequelize, DataTypes, Model } from 'sequelize';
+import { initRequerimentsModel, Requirements } from "../models/requerimentsModel";
+import { initAnalisysHaveRequirementsModel, AnalisysHaveRequirements } from "../models/analisysHaveRequirementsModel";
 
 // Configuração da conexão com o banco de dados
 const sequelize = new Sequelize({
@@ -14,6 +16,20 @@ const sequelize = new Sequelize({
     acquire: 30000,  // Tempo máximo de espera para adquirir uma conexão
     idle: 60000,     // Tempo máximo de inatividade antes de liberar uma conexão
   },
+});
+
+// Inicializando os modelos
+initRequerimentsModel(sequelize);
+initAnalisysHaveRequirementsModel(sequelize);
+
+// Configurando associações
+Requirements.hasMany(AnalisysHaveRequirements, {
+  foreignKey: "idRequirements",
+  as: "analisysAssociations",
+});
+AnalisysHaveRequirements.belongsTo(Requirements, {
+  foreignKey: "idRequirements",
+  as: "requirement",
 });
 
 // Adicionando o setInterval para manter a conexão ativa
