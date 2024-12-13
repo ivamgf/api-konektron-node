@@ -8,12 +8,15 @@ import { Sequelize } from 'sequelize';
 import authRoutes from './routes/authRoutes';
 import { config } from 'dotenv';
 import { initUserModel } from './models/userModel';
-import profileRoutes from './routes/profileRoutes';
-import analysisRoutes from "./routes/analisysRoutes";
 
 // Importa rotas
 import indexRouter from './routes/index';
 import usersRouter from './routes/userRoutes';
+import profileRoutes from './routes/profileRoutes';
+import analysisRoutes from "./routes/analisysRoutes";
+import requirementsRoutes from "./routes/requerimentsRoutes";
+import userStoriesRoutes from "./routes/userStoriesRoutes";
+import diagramsRoutes from "./routes/diagramsRoutes";
 
 const app = express();
 
@@ -102,6 +105,9 @@ app.use('/auth', authRoutes);
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use("/analysis", analysisRoutes);
+app.use("/requirements", requirementsRoutes);
+app.use("/userStories", userStoriesRoutes);
+app.use("/diagrams", diagramsRoutes);
 
 // Outros middlewares e configurações da aplicação
 app.use('/api', profileRoutes);
