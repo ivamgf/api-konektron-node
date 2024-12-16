@@ -1,11 +1,19 @@
 import { Request, Response } from "express";
 import { Diagrams } from "../models/diagramsModel";
+import { AnalisysHaveDiagrams } from "../models/analisysHaveDiagramsModel";
 
 export class DiagramsController {
     static async createDiagram(req: Request, res: Response) {
         try {
-            const data = req.body;
+            const { idAnalisys, ...data } = req.body;
             const diagram = await Diagrams.create(data);
+            // Criar o relacionamento na tabela AnalisysHaveDiagrams
+            if (idAnalisys) {
+                await AnalisysHaveDiagrams.create({
+                    idAnalisys,
+                    idDiagrams: diagram.idDiagrams,
+                });
+            }
             res.status(201).json(diagram);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Erro ao criar o diagrama.';
@@ -63,6 +71,13 @@ export class DiagramsController {
             if (!diagram) {
                 return res.status(404).json({ message: "Diagram not found" });
             }
+
+            // Remover registros relacionados na tabela AnalisysHaveDiagrams
+            await AnalisysHaveDiagrams.destroy({
+                where: {
+                    idDiagrams: id,
+                },
+            });
 
             await diagram.destroy();
             res.status(204).send();
