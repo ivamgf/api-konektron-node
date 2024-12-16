@@ -1,11 +1,19 @@
 import { Request, Response } from "express";
 import { UserStories } from "../models/userStoriesModel";
+import { AnalisysHaveUserStories } from "../models/analisysHaveUserStoriesModel";
 
 export class UserStoriesController {
     static async createUserStory(req: Request, res: Response) {
         try {
-            const data = req.body;
+            const { analysisId, ...data } = req.body;
             const userStory = await UserStories.create(data);
+            // Criar o relacionamento na tabela AnalisysHaveUserStories
+            if (analysisId) {
+                await AnalisysHaveUserStories.create({
+                    idAnalysis: analysisId,
+                    idUserStory: userStory.idUserStories, // id gerado na criação do userStory
+                });
+            }
             res.status(201).json(userStory);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Erro ao criar a user stories.';
@@ -63,6 +71,10 @@ export class UserStoriesController {
             if (!userStory) {
                 return res.status(404).json({ message: "User Story not found" });
             }
+
+            await AnalisysHaveUserStories.destroy({
+                where: { idUserStory: id },
+            });
 
             await userStory.destroy();
             res.status(204).send();
