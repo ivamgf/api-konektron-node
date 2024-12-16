@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { Analysis } from "../models/analisysModel";
-import { UsersHaveAnalysis } from "../models/usersHaveAnalisys";
+import { UsersHaveAnalysis } from "../models/usersHaveAnalisysModel";
 
 export class AnalysisController {
     static async createAnalysis(req: Request, res: Response) {

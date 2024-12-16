@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { UserStories } from "../models/userStoriesModel";
-import { AnalisysHaveUserStories } from "../models/analisysHaveUserStories";
+import { AnalisysHaveUserStories } from "../models/analisysHaveUserStoriesModel";
 
 export class UserStoriesController {
     static async createUserStory(req: Request, res: Response) {
