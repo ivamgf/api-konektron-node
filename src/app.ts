@@ -32,6 +32,7 @@ interface DbConfig {
   password: string;
   database: string;
   port: number;
+  charset: any;
 }
 
 // Estender a interface Request para incluir `dbConnection`
@@ -50,6 +51,7 @@ const dbConfig: DbConfig = {
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || '',
   port: Number(process.env.DB_PORT) || 3306,
+  charset: 'utf8mb4',
 };
 
 // Cria uma conexão com o banco de dados MySQL

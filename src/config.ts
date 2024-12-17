@@ -1,4 +1,5 @@
 import { randomBytes } from 'crypto';
+import dotenv from 'dotenv';
 
 const generateJwtSecret = () => {
   const secret = randomBytes(64).toString('hex');

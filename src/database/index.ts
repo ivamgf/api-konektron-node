@@ -2,21 +2,32 @@
 import { Sequelize, DataTypes, Model } from 'sequelize';
 import { initRequerimentsModel, Requirements } from "../models/requerimentsModel";
 import { initAnalisysHaveRequirementsModel, AnalisysHaveRequirements } from "../models/analisysHaveRequirementsModel";
+import dotenv from 'dotenv';
 
-// Configuração da conexão com o banco de dados
-const sequelize = new Sequelize({
-  dialect: 'mysql',
-  host: 'localhost',
-  username: 'root',
-  password: 'password',
-  database: 'your_database_name',
-  pool: {
-    max: 30,
-    min: 0,
-    acquire: 30000,  // Tempo máximo de espera para adquirir uma conexão
-    idle: 60000,     // Tempo máximo de inatividade antes de liberar uma conexão
-  },
-});
+// Configuração da conexão com o banco de dados, considerando diferentes ambientes
+let sequelize: Sequelize;
+
+if (process.env.NODE_ENV !== 'test') {
+  sequelize = new Sequelize({
+    dialect: 'mysql',
+    host: process.env.DB_HOST || 'orkneytech.com.br',
+    username: process.env.DB_USER || 'orkney10_konektron_admin',
+    password: process.env.DB_PASS || '*',
+    database: process.env.DB_NAME || 'orkney10_konektron',
+    pool: {
+      max: 30,
+      min: 0,
+      acquire: 30000, // Tempo máximo de espera para adquirir uma conexão
+      idle: 60000, // Tempo máximo de inatividade antes de liberar uma conexão
+    },
+    dialectOptions: {
+      charset: 'utf8mb4',
+    },
+  });
+} else {
+  // Configuração para testes usando SQLite em memória
+  sequelize = new Sequelize('sqlite::memory:');
+}
 
 // Inicializando os modelos
 initRequerimentsModel(sequelize);
@@ -32,20 +43,20 @@ AnalisysHaveRequirements.belongsTo(Requirements, {
   as: "requirement",
 });
 
-// Adicionando o setInterval para manter a conexão ativa
-setInterval(async () => {
-  try {
-    await sequelize.authenticate(); // Faz um "ping" para manter a conexão ativa
-    console.log('Connection is still alive');
-  } catch (error) {
-    console.error('Unable to connect to the database:', error);
-  }
-}, 60000); // Intervalo de 1 minuto
+// Adicionando o setInterval para manter a conexão ativa (somente em produção)
+if (process.env.NODE_ENV !== 'test') {
+  setInterval(async () => {
+    try {
+      await sequelize.authenticate(); // Faz um "ping" para manter a conexão ativa
+      console.log('Connection is still alive');
+    } catch (error) {
+      console.error('Unable to connect to the database:', error);
+    }
+  }, 60000); // Intervalo de 1 minuto
+}
 
 // Definição do modelo User
-class User extends Model {
-  // Defina os atributos do modelo aqui, caso precise de métodos ou getters/setters
-}
+class User extends Model {}
 
 User.init(
   {
@@ -189,7 +200,7 @@ class UsersHaveProfile extends Model {}
 
 UsersHaveProfile.init({}, { sequelize, tableName: 'users_have_profile' });
 
-// Definindo associações
+// Configurando associações entre modelos
 User.hasMany(UsersHaveProfile, { foreignKey: 'idUser', onDelete: 'CASCADE' });
 Profile.hasMany(UsersHaveProfile, { foreignKey: 'idProfile', onDelete: 'CASCADE' });
 UsersHaveProfile.belongsTo(User, { foreignKey: 'idUser' });
@@ -197,5 +208,10 @@ UsersHaveProfile.belongsTo(Profile, { foreignKey: 'idProfile' });
 
 // Sincronizando o banco de dados
 sequelize.sync();
+
+afterAll(() => {
+  // Fecha a conexão com o banco após os testes
+  sequelize.close();
+});
 
 export { sequelize, User, Profile, UsersHaveProfile };

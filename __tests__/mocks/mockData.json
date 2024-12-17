@@ -1,0 +1,423 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "email": "test@example.com",
+      "password": "password123",
+      "type": "admin",
+      "enabled": true
+    },
+    {
+      "id": 2,
+      "email": "user@example.com",
+      "password": "securepass",
+      "type": "user",
+      "enabled": false
+    }
+  ],
+  "analyses": [
+    {
+      "idAnalysis": 1,
+      "name": "Test Analysis",
+      "description": "This is a test."
+    },
+    {
+      "idAnalysis": 2,
+      "name": "Fetch Test",
+      "description": "To be fetched."
+    },
+    {
+      "idAnalysis": 3,
+      "name": "Update Test",
+      "description": "Updated description."
+    },
+    {
+      "idAnalysis": 4,
+      "name": "Test Analysis",
+      "description": "This is a test."
+    },
+    {
+      "idAnalysis": 5,
+      "name": "Fetch Test",
+      "description": "To be fetched."
+    },
+    {
+      "idAnalysis": 6,
+      "name": "Update Test",
+      "description": "Updated description."
+    },
+    {
+      "idAnalysis": 7,
+      "name": "Test Analysis",
+      "description": "This is a test."
+    },
+    {
+      "idAnalysis": 8,
+      "name": "Fetch Test",
+      "description": "To be fetched."
+    },
+    {
+      "idAnalysis": 9,
+      "name": "Update Test",
+      "description": "Updated description."
+    },
+    {
+      "idAnalysis": 10,
+      "name": "Test Analysis",
+      "description": "This is a test."
+    },
+    {
+      "idAnalysis": 11,
+      "name": "Fetch Test",
+      "description": "To be fetched."
+    },
+    {
+      "idAnalysis": 12,
+      "name": "Update Test",
+      "description": "Updated description."
+    },
+    {
+      "idAnalysis": 13,
+      "name": "Test Analysis",
+      "description": "This is a test."
+    },
+    {
+      "idAnalysis": 14,
+      "name": "Fetch Test",
+      "description": "To be fetched."
+    },
+    {
+      "idAnalysis": 15,
+      "name": "Update Test",
+      "description": "Updated description."
+    },
+    {
+      "idAnalysis": 16,
+      "name": "Test Analysis",
+      "description": "This is a test."
+    },
+    {
+      "idAnalysis": 17,
+      "name": "Fetch Test",
+      "description": "To be fetched."
+    },
+    {
+      "idAnalysis": 18,
+      "name": "Update Test",
+      "description": "Updated description."
+    },
+    {
+      "idAnalysis": 19,
+      "name": "Test Analysis",
+      "description": "This is a test."
+    },
+    {
+      "idAnalysis": 20,
+      "name": "Fetch Test",
+      "description": "To be fetched."
+    },
+    {
+      "idAnalysis": 21,
+      "name": "Update Test",
+      "description": "Updated description."
+    },
+    {
+      "idAnalysis": 22,
+      "name": "Test Analysis",
+      "description": "This is a test."
+    },
+    {
+      "idAnalysis": 23,
+      "name": "Fetch Test",
+      "description": "To be fetched."
+    },
+    {
+      "idAnalysis": 24,
+      "name": "Update Test",
+      "description": "Updated description."
+    },
+    {
+      "idAnalysis": 25,
+      "name": "Test Analysis",
+      "description": "This is a test."
+    },
+    {
+      "idAnalysis": 26,
+      "name": "Fetch Test",
+      "description": "To be fetched."
+    },
+    {
+      "idAnalysis": 27,
+      "name": "Update Test",
+      "description": "Updated description."
+    },
+    {
+      "idAnalysis": 28,
+      "name": "Test Analysis",
+      "description": "This is a test."
+    },
+    {
+      "idAnalysis": 29,
+      "name": "Fetch Test",
+      "description": "To be fetched."
+    },
+    {
+      "idAnalysis": 30,
+      "name": "Update Test",
+      "description": "Updated description."
+    },
+    {
+      "idAnalysis": 31,
+      "name": "Test Analysis",
+      "description": "This is a test."
+    },
+    {
+      "idAnalysis": 32,
+      "name": "Fetch Test",
+      "description": "To be fetched."
+    },
+    {
+      "idAnalysis": 33,
+      "name": "Update Test",
+      "description": "Updated description."
+    },
+    {
+      "idAnalysis": 34,
+      "name": "Test Analysis",
+      "description": "This is a test."
+    },
+    {
+      "idAnalysis": 35,
+      "name": "Fetch Test",
+      "description": "To be fetched."
+    },
+    {
+      "idAnalysis": 36,
+      "name": "Update Test",
+      "description": "Updated description."
+    },
+    {
+      "idAnalysis": 37,
+      "name": "Test Analysis",
+      "description": "This is a test."
+    },
+    {
+      "idAnalysis": 38,
+      "name": "Fetch Test",
+      "description": "To be fetched."
+    },
+    {
+      "idAnalysis": 39,
+      "name": "Update Test",
+      "description": "Updated description."
+    },
+    {
+      "idAnalysis": 40,
+      "name": "Test Analysis",
+      "description": "This is a test."
+    },
+    {
+      "idAnalysis": 41,
+      "name": "Fetch Test",
+      "description": "To be fetched."
+    },
+    {
+      "idAnalysis": 42,
+      "name": "Update Test",
+      "description": "Updated description."
+    },
+    {
+      "idAnalysis": 43,
+      "name": "Test Analysis",
+      "description": "This is a test."
+    },
+    {
+      "idAnalysis": 44,
+      "name": "Fetch Test",
+      "description": "To be fetched."
+    },
+    {
+      "idAnalysis": 45,
+      "name": "Update Test",
+      "description": "Updated description."
+    },
+    {
+      "idAnalysis": 46,
+      "name": "Test Analysis",
+      "description": "This is a test."
+    },
+    {
+      "idAnalysis": 47,
+      "name": "Fetch Test",
+      "description": "To be fetched."
+    },
+    {
+      "idAnalysis": 48,
+      "name": "Update Test",
+      "description": "Updated description."
+    },
+    {
+      "idAnalysis": 49,
+      "name": "Test Analysis",
+      "description": "This is a test."
+    },
+    {
+      "idAnalysis": 50,
+      "name": "Fetch Test",
+      "description": "To be fetched."
+    },
+    {
+      "idAnalysis": 51,
+      "name": "Update Test",
+      "description": "Updated description."
+    },
+    {
+      "idAnalysis": 52,
+      "name": "Test Analysis",
+      "description": "This is a test."
+    },
+    {
+      "idAnalysis": 53,
+      "name": "Fetch Test",
+      "description": "To be fetched."
+    },
+    {
+      "idAnalysis": 54,
+      "name": "Update Test",
+      "description": "Updated description."
+    },
+    {
+      "idAnalysis": 55,
+      "name": "Test Analysis",
+      "description": "This is a test."
+    },
+    {
+      "idAnalysis": 56,
+      "name": "Fetch Test",
+      "description": "To be fetched."
+    },
+    {
+      "idAnalysis": 57,
+      "name": "Update Test",
+      "description": "Updated description."
+    },
+    {
+      "idAnalysis": 58,
+      "name": "Test Analysis",
+      "description": "This is a test."
+    },
+    {
+      "idAnalysis": 59,
+      "name": "Fetch Test",
+      "description": "To be fetched."
+    },
+    {
+      "idAnalysis": 60,
+      "name": "Update Test",
+      "description": "Updated description."
+    },
+    {
+      "idAnalysis": 61,
+      "name": "Test Analysis",
+      "description": "This is a test."
+    },
+    {
+      "idAnalysis": 62,
+      "name": "Fetch Test",
+      "description": "To be fetched."
+    },
+    {
+      "idAnalysis": 63,
+      "name": "Update Test",
+      "description": "Updated description."
+    },
+    {
+      "idAnalysis": 64,
+      "name": "Test Analysis",
+      "description": "This is a test."
+    },
+    {
+      "idAnalysis": 65,
+      "name": "Fetch Test",
+      "description": "To be fetched."
+    },
+    {
+      "idAnalysis": 66,
+      "name": "Update Test",
+      "description": "Updated description."
+    }
+  ],
+  "usersHaveAnalyses": [],
+  "diagrams": [
+    {
+      "idDiagrams": 1,
+      "title": "Diagram 1",
+      "description": "Description of Diagram 1"
+    },
+    {
+      "idDiagrams": 2,
+      "title": "Diagram 2",
+      "description": "Description of Diagram 2"
+    }
+  ],
+  "profiles": [
+    {
+      "userId": 1,
+      "name": "John Doe",
+      "email": "john.doe@example.com",
+      "age": 30
+    },
+    {
+      "userId": 2,
+      "name": "Jane Smith",
+      "email": "jane.smith@example.com",
+      "age": 25
+    }
+  ],
+  "requirements": [
+    {
+      "idRequirements": 1,
+      "name": "Requirement 1",
+      "description": "Description for requirement 1"
+    },
+    {
+      "idRequirements": 2,
+      "name": "Requirement 2",
+      "description": "Description for requirement 2"
+    }
+  ],
+  "analisysHaveRequirements": [
+    {
+      "idAnalisys": 1,
+      "idRequirements": 1
+    },
+    {
+      "idAnalisys": 2,
+      "idRequirements": 2
+    }
+  ],
+  "userStories": [
+    {
+      "idUserStories": 1,
+      "title": "As a user, I want to register my account",
+      "description": "Enable account registration with email and password",
+      "priority": "High"
+    },
+    {
+      "idUserStories": 2,
+      "title": "As an admin, I want to manage user accounts",
+      "description": "Add, update, or delete user accounts",
+      "priority": "Medium"
+    }
+  ],
+  "analisysHaveUserStories": [
+    {
+      "idAnalysis": 101,
+      "idUserStory": 1
+    },
+    {
+      "idAnalysis": 102,
+      "idUserStory": 2
+    }
+  ]
+}
