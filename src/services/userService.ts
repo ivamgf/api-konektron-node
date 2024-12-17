@@ -51,7 +51,9 @@ export const getUserByEmail = async (email: string): Promise<Users | null> => {
 
 // Função para deletar um usuário
 export const deleteUser = async (userId: number): Promise<Users | null> => {
-  const user = await Users.findByPk(userId);
+  const user = await Users.findByPk(userId, {
+    attributes: { exclude: ['resetToken', 'resetTokenExpiration'] }, // Exclui os campos de todos os registros
+  });
   if (!user) {
     return null; // Usuário não encontrado
   }
@@ -64,14 +66,18 @@ export const deleteUser = async (userId: number): Promise<Users | null> => {
 export const getUsers = async (userId?: number): Promise<Users | Users[]> => {
   if (userId) {
     // Busca um único usuário por ID
-    const user = await Users.findByPk(userId);
+    const user = await Users.findByPk(userId, {
+      attributes: { exclude: ['resetToken', 'resetTokenExpiration'] }, // Exclui os campos de todos os registros
+    });
     if (!user) {
       throw new Error('Usuário não encontrado');
     }
     return user; // Retorna o usuário encontrado
   } else {
     // Caso o userId não seja fornecido, retorna todos os usuários
-    const users = await Users.findAll();
+    const users = await Users.findAll({
+      attributes: { exclude: ['resetToken', 'resetTokenExpiration'] }, // Exclui os campos de todos os registros
+    });
     return users; // Retorna todos os usuários
   }
 };

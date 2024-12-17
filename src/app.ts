@@ -106,6 +106,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/auth', authRoutes);
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
+app.use('/users/:userId', usersRouter);
+app.use('/delete/:userId', usersRouter);
 app.use('/register', usersRouter);
 app.use("/analysis", analysisRoutes);
 app.use("/requirements", requirementsRoutes);

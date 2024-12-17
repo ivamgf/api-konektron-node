@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { createUser, enableUser, updateUserPassword, getUsers, deleteUser } from '../services/userService';
-import { Profile } from '../models/profileModel';
+import { UsersHaveProfile } from '../models/usersHaveProfileModel';
 
 export const registerUser = async (req: Request, res: Response) => {
   const { email, password, type } = req.body;
@@ -95,29 +95,27 @@ export const queryUsers = async (req: Request, res: Response) => {
 /**
  * Controlador para deletar um usuário e suas associações com idUserHaveProfile e idProfile.
  */
+
 export const deleteUserController = async (req: Request, res: Response) => {
   const { userId } = req.params;
 
   try {
-    // Verifica se o userId é válido
+    // Valida se o userId foi fornecido e é um número
     if (!userId || isNaN(Number(userId))) {
       return res.status(400).json({ error: 'ID de usuário inválido.' });
     }
 
-    // Deleta as associações com idUserHaveProfile e idProfile antes de deletar o usuário
-    await Profile.destroy({
-      where: { userId: Number(userId) },
-    });
+    const numericUserId = Number(userId);
 
-    // Deleta o usuário
-    const user = await deleteUser(Number(userId));
-    if (user) {
-      res.status(200).json({ message: 'Usuário e suas associações deletados com sucesso.' });
+    const userDeleted = await deleteUser(numericUserId);
+    if (userDeleted) {
+      return res.status(200).json({ message: 'Usuário e registros associados deletados com sucesso.' });
     } else {
-      res.status(404).json({ error: 'Usuário não encontrado.' });
+      return res.status(404).json({ error: 'Usuário não encontrado na tabela Users.' });
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Erro ao deletar usuário.';
+    console.error(`Erro ao deletar usuário: ${errorMessage}`);
     res.status(500).json({ error: errorMessage });
   }
 };

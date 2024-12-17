@@ -1,6 +1,6 @@
 // userRouter.ts
 import { Router, Request, Response } from 'express';
-import { registerUser, confirmUser, changePassword, queryUsers } from '../controllers/userController';
+import { registerUser, confirmUser, changePassword, queryUsers, deleteUserController } from '../controllers/userController';
 import { login } from '../controllers/authController'; // Importe a função de login
 
 const router = Router();
@@ -37,5 +37,8 @@ router.post('/login', login); // Adiciona a rota de login aqui
 router.get('/', (req: Request, res: Response) => {
   res.send('Respondendo com um recurso de usuários');
 });
+
+// Rota para deletar um usuário
+router.delete('/delete/:userId', deleteUserController);
 
 export default router;
