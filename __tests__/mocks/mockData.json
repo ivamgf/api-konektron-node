@@ -3,12 +3,16 @@
     {
       "id": 1,
       "email": "test@example.com",
-      "password": "password123"
+      "password": "password123",
+      "type": "admin",
+      "enabled": true
     },
     {
       "id": 2,
       "email": "user@example.com",
-      "password": "securepass"
+      "password": "securepass",
+      "type": "user",
+      "enabled": false
     }
   ],
   "analyses": [
@@ -251,6 +255,96 @@
       "idAnalysis": 48,
       "name": "Update Test",
       "description": "Updated description."
+    },
+    {
+      "idAnalysis": 49,
+      "name": "Test Analysis",
+      "description": "This is a test."
+    },
+    {
+      "idAnalysis": 50,
+      "name": "Fetch Test",
+      "description": "To be fetched."
+    },
+    {
+      "idAnalysis": 51,
+      "name": "Update Test",
+      "description": "Updated description."
+    },
+    {
+      "idAnalysis": 52,
+      "name": "Test Analysis",
+      "description": "This is a test."
+    },
+    {
+      "idAnalysis": 53,
+      "name": "Fetch Test",
+      "description": "To be fetched."
+    },
+    {
+      "idAnalysis": 54,
+      "name": "Update Test",
+      "description": "Updated description."
+    },
+    {
+      "idAnalysis": 55,
+      "name": "Test Analysis",
+      "description": "This is a test."
+    },
+    {
+      "idAnalysis": 56,
+      "name": "Fetch Test",
+      "description": "To be fetched."
+    },
+    {
+      "idAnalysis": 57,
+      "name": "Update Test",
+      "description": "Updated description."
+    },
+    {
+      "idAnalysis": 58,
+      "name": "Test Analysis",
+      "description": "This is a test."
+    },
+    {
+      "idAnalysis": 59,
+      "name": "Fetch Test",
+      "description": "To be fetched."
+    },
+    {
+      "idAnalysis": 60,
+      "name": "Update Test",
+      "description": "Updated description."
+    },
+    {
+      "idAnalysis": 61,
+      "name": "Test Analysis",
+      "description": "This is a test."
+    },
+    {
+      "idAnalysis": 62,
+      "name": "Fetch Test",
+      "description": "To be fetched."
+    },
+    {
+      "idAnalysis": 63,
+      "name": "Update Test",
+      "description": "Updated description."
+    },
+    {
+      "idAnalysis": 64,
+      "name": "Test Analysis",
+      "description": "This is a test."
+    },
+    {
+      "idAnalysis": 65,
+      "name": "Fetch Test",
+      "description": "To be fetched."
+    },
+    {
+      "idAnalysis": 66,
+      "name": "Update Test",
+      "description": "Updated description."
     }
   ],
   "usersHaveAnalyses": [],
@@ -264,6 +358,66 @@
       "idDiagrams": 2,
       "title": "Diagram 2",
       "description": "Description of Diagram 2"
+    }
+  ],
+  "profiles": [
+    {
+      "userId": 1,
+      "name": "John Doe",
+      "email": "john.doe@example.com",
+      "age": 30
+    },
+    {
+      "userId": 2,
+      "name": "Jane Smith",
+      "email": "jane.smith@example.com",
+      "age": 25
+    }
+  ],
+  "requirements": [
+    {
+      "idRequirements": 1,
+      "name": "Requirement 1",
+      "description": "Description for requirement 1"
+    },
+    {
+      "idRequirements": 2,
+      "name": "Requirement 2",
+      "description": "Description for requirement 2"
+    }
+  ],
+  "analisysHaveRequirements": [
+    {
+      "idAnalisys": 1,
+      "idRequirements": 1
+    },
+    {
+      "idAnalisys": 2,
+      "idRequirements": 2
+    }
+  ],
+  "userStories": [
+    {
+      "idUserStories": 1,
+      "title": "As a user, I want to register my account",
+      "description": "Enable account registration with email and password",
+      "priority": "High"
+    },
+    {
+      "idUserStories": 2,
+      "title": "As an admin, I want to manage user accounts",
+      "description": "Add, update, or delete user accounts",
+      "priority": "Medium"
+    }
+  ],
+  "analisysHaveUserStories": [
+    {
+      "idAnalysis": 101,
+      "idUserStory": 1
+    },
+    {
+      "idAnalysis": 102,
+      "idUserStory": 2
     }
   ]
 }
