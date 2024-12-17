@@ -1,5 +1,5 @@
 import { Profile } from '../models/profileModel';
-import { User } from '../models/userModel';
+import { Users } from '../models/userModel';
 import UsersHaveProfile from '../models/usersHaveProfileModel';
 
 /**
@@ -11,7 +11,7 @@ export const getProfileByUserId = async (idUser: number): Promise<Profile | null
   const profile = await Profile.findOne({
     // Join com a tabela UsersHaveProfile para verificar o perfil do usuário
     include: {
-      model: User,
+      model: Users,
       through: {
         attributes: [] // Não precisa de atributos específicos da tabela de junção
       },
@@ -32,7 +32,7 @@ export const updateProfileByUserId = async (idUser: number, updatedData: any): P
     // Encontrar o perfil associado ao idUser
     const profile = await Profile.findOne({
       include: {
-        model: User,
+        model: Users,
         through: {
           attributes: [] // Não precisa de atributos específicos da tabela de junção
         },

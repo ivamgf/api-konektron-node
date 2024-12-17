@@ -1,5 +1,5 @@
 import { Sequelize, DataTypes, Model } from 'sequelize';
-import { User } from './userModel';
+import { Users } from './userModel';
 import UsersHaveProfile from './usersHaveProfileModel';
 
 export class Profile extends Model {
@@ -122,7 +122,7 @@ export const initProfileModel = (sequelize: Sequelize): void => {
   Profile.hasMany(UsersHaveProfile, { foreignKey: 'idProfile', onDelete: 'CASCADE' });
 
   // Associação com Users através de UsersHaveProfile
-  Profile.belongsToMany(User, {
+  Profile.belongsToMany(Users, {
     through: UsersHaveProfile,
     foreignKey: 'idProfile',
     otherKey: 'idUser',

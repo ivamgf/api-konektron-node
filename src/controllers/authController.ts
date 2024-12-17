@@ -20,7 +20,7 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
     }
 
     // Usando o operador de coalescência nula para fornecer um valor padrão se user.id for undefined
-    const userId = user.id ?? -1; // Fornece um valor padrão caso user.id seja undefined
+    const userId = user.idUser ?? -1; // Fornece um valor padrão caso user.id seja undefined
 
     // Gera o token JWT com o userId
     const token = generateToken(userId);

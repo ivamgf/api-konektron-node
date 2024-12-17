@@ -106,6 +106,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/auth', authRoutes);
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
+app.use('/register', usersRouter);
 app.use("/analysis", analysisRoutes);
 app.use("/requirements", requirementsRoutes);
 app.use("/userStories", userStoriesRoutes);
@@ -123,7 +124,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.use((err: createError.HttpError, req: Request, res: Response, next: NextFunction) => {
   res.locals.message = err.message;
   res.locals.error = req.app.get('env') === 'development' ? err : {};
-  res.status(err.status || 500);
+  res.status(err.status || 500)
   res.render('error');
 });
 
@@ -136,6 +137,12 @@ process.on('SIGINT', () => {
     console.log('Conexão ao banco de dados MySQL encerrada.');
   });
   process.exit(0);
+});
+
+// Rota de exemplo para renderizar a página de confirmação
+app.get('/confirm/:token', (req, res) => {
+  const { token } = req.params;
+  res.render('confirmationEmail', { token });
 });
 
 export default app;

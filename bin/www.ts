@@ -7,36 +7,36 @@ import http from 'http';
 const debugLogger = debug('api-konektron-node:server');
 
 /**
- * Get port from environment and store in Express.
+ * Obtém a porta do ambiente e configura no Express.
  */
 const port = normalizePort(process.env.PORT || '3000');
 app.set('port', port);
 
 /**
- * Create HTTP server.
+ * Cria o servidor HTTP.
  */
 const server = http.createServer(app);
 
 /**
- * Listen on provided port, on all network interfaces.
+ * Ouve na porta fornecida em todas as interfaces de rede.
  */
 server.listen(port);
 server.on('error', onError);
 server.on('listening', onListening);
 
 /**
- * Normalize a port into a number, string, or false.
+ * Normaliza uma porta em número, string ou false.
  */
 function normalizePort(val: string): number | string | false {
   const port = parseInt(val, 10);
 
   if (isNaN(port)) {
-    // named pipe
+    // Pipe nomeado
     return val;
   }
 
   if (port >= 0) {
-    // port number
+    // Número de porta
     return port;
   }
 
@@ -44,18 +44,16 @@ function normalizePort(val: string): number | string | false {
 }
 
 /**
- * Event listener for HTTP server "error" event.
+ * Tratador de erros para o evento "error" do servidor HTTP.
  */
 function onError(error: NodeJS.ErrnoException): void {
   if (error.syscall !== 'listen') {
     throw error;
   }
 
-  const bind = typeof port === 'string'
-    ? 'Pipe ' + port
-    : 'Port ' + port;
+  const bind = typeof port === 'string' ? 'Pipe ' + port : 'Port ' + port;
 
-  // handle specific listen errors with friendly messages
+  // Lida com erros específicos de escuta
   switch (error.code) {
     case 'EACCES':
       console.error(`${bind} requires elevated privileges`);
@@ -71,12 +69,19 @@ function onError(error: NodeJS.ErrnoException): void {
 }
 
 /**
- * Event listener for HTTP server "listening" event.
+ * Tratador do evento "listening" do servidor HTTP.
+ * Exibe o endereço e a porta no console como URL para facilitar o acesso.
  */
 function onListening(): void {
   const addr = server.address();
-  const bind = typeof addr === 'string'
-    ? 'pipe ' + addr
-    : addr && `port ${addr.port}`;
-  debugLogger(`Listening on ${bind}`);
+  const host = process.env.HOST || 'localhost';
+  const protocol = app.get('protocol') || 'http';
+
+  if (addr && typeof addr === 'object') {
+    const url = `${protocol}://${host}:${addr.port}`;
+    console.log(`Server is running at ${url}`);
+    debugLogger(`Listening on ${url}`);
+  } else {
+    console.log('Server is running, but the address is not available.');
+  }
 }

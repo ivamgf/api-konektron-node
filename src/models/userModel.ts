@@ -3,7 +3,7 @@ import { Sequelize, DataTypes, Model } from 'sequelize';
 import bcrypt from 'bcryptjs'; // Certifique-se de que bcryptjs está instalado
 
 export interface UserAttributes {
-  id?: number;
+  idUser?: number;
   email: string;
   password: string;
   type?: string;
@@ -11,11 +11,11 @@ export interface UserAttributes {
   dateCreate: Date;
   dateUpdate?: Date;
   resetToken?: string | null; // Nova propriedade
-  resetTokenExpiration?: Date | null;
+  resetTokenExpiration?: Date | null; // Nova propriedade
 }
 
-export class User extends Model<UserAttributes> implements UserAttributes {
-  public id?: number;
+export class Users extends Model<UserAttributes> implements UserAttributes {
+  public idUser?: number;
   public email!: string;
   public password!: string;
   public type?: string;
@@ -28,9 +28,9 @@ export class User extends Model<UserAttributes> implements UserAttributes {
 
 // Função para inicializar o modelo User
 export const initUserModel = (sequelize: Sequelize): void => {
-  User.init(
+  Users.init(
     {
-      id: {
+      idUser: {
         type: DataTypes.INTEGER,
         primaryKey: true,
         autoIncrement: true,
@@ -72,24 +72,28 @@ export const initUserModel = (sequelize: Sequelize): void => {
     {
       sequelize,
       tableName: 'users',
-      timestamps: false,
+      timestamps: true,  // Configuração de timestamps (automaticamente cria createdAt e updatedAt)
+      createdAt: 'dateCreate',
+      updatedAt: 'dateUpdate',
     }
   );
 
   // Hook para criptografar a senha antes de salvar no banco
-  User.addHook('beforeCreate', async (user: User) => {
-    user.password = await bcrypt.hash(user.password, 10);
+  Users.addHook('beforeCreate', async (user: Users) => {
+    if (user.password) {
+      user.password = await bcrypt.hash(user.password, 10);
+    }
   });
 
-  User.addHook('beforeUpdate', async (user: User) => {
-    if (user.changed('password')) {
+  Users.addHook('beforeUpdate', async (user: Users) => {
+    if (user.changed('password') && user.password) {
       user.password = await bcrypt.hash(user.password, 10);
     }
   });
 };
 
 // Função para buscar usuário pelo email
-export const getUserByEmail = async (email: string): Promise<User | null> => {
-  const user = await User.findOne({ where: { email } });
+export const getUserByEmail = async (email: string): Promise<Users | null> => {
+  const user = await Users.findOne({ where: { email } });
   return user || null;
 };

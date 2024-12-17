@@ -1,5 +1,5 @@
 import { Sequelize, DataTypes, Model } from 'sequelize';
-import { User } from './userModel';
+import { Users } from './userModel';
 import { Profile } from './profileModel';
 
 export class UsersHaveProfile extends Model {
@@ -34,11 +34,11 @@ export const initUsersHaveProfileModel = (sequelize: Sequelize): void => {
   );
 
   // Definindo o relacionamento (associações) depois de inicializar o modelo
-  UsersHaveProfile.belongsTo(User, { foreignKey: 'idUser' });
+  UsersHaveProfile.belongsTo(Users, { foreignKey: 'idUser' });
   UsersHaveProfile.belongsTo(Profile, { foreignKey: 'idProfile' });
 
   // Definindo as associações em User e Profile
-  User.hasMany(UsersHaveProfile, { foreignKey: 'idUser' });
+  Users.hasMany(UsersHaveProfile, { foreignKey: 'idUser' });
   Profile.hasMany(UsersHaveProfile, { foreignKey: 'idProfile' });
 };
 

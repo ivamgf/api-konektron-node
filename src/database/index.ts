@@ -1,8 +1,7 @@
-// Configuração principal do Sequelize
 import { Sequelize, DataTypes, Model } from 'sequelize';
+import bcrypt from 'bcryptjs';
 import { initRequerimentsModel, Requirements } from "../models/requerimentsModel";
 import { initAnalisysHaveRequirementsModel, AnalisysHaveRequirements } from "../models/analisysHaveRequirementsModel";
-import dotenv from 'dotenv';
 
 // Configuração da conexão com o banco de dados, considerando diferentes ambientes
 let sequelize: Sequelize;
@@ -12,7 +11,7 @@ if (process.env.NODE_ENV !== 'test') {
     dialect: 'mysql',
     host: process.env.DB_HOST || 'orkneytech.com.br',
     username: process.env.DB_USER || 'orkney10_konektron_admin',
-    password: process.env.DB_PASS || '*',
+    password: process.env.DB_PASS || '5oXFn{(Zyl7Z',
     database: process.env.DB_NAME || 'orkney10_konektron',
     pool: {
       max: 30,
@@ -55,51 +54,92 @@ if (process.env.NODE_ENV !== 'test') {
   }, 60000); // Intervalo de 1 minuto
 }
 
-// Definição do modelo User
-class User extends Model {}
+// Definição do modelo Users
+export interface UserAttributes {
+  idUser?: number; // Alterando para 'idUser'
+  email: string;
+  password: string;
+  type?: string;
+  enabled: boolean;
+  dateCreate: Date;
+  dateUpdate?: Date;
+  resetToken?: string | null;
+  resetTokenExpiration?: Date | null;
+}
 
-User.init(
-  {
-    email: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      unique: true,
+export class Users extends Model<UserAttributes> implements UserAttributes {
+  public idUser?: number; // Alterando para 'idUser'
+  public email!: string;
+  public password!: string;
+  public type?: string;
+  public enabled!: boolean;
+  public dateCreate!: Date;
+  public dateUpdate?: Date;
+  public resetToken?: string | null;
+  public resetTokenExpiration?: Date | null;
+}
+
+// Função para inicializar o modelo User
+export const initUserModel = (sequelize: Sequelize): void => {
+  Users.init(
+    {
+      idUser: { // Alterando 'id' para 'idUser'
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true, // Esse campo será auto-incrementado
+      },
+      email: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true,
+      },
+      password: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      type: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      enabled: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
+      dateCreate: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW,
+      },
+      dateUpdate: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      resetToken: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      resetTokenExpiration: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
     },
-    password: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    type: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    enabled: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
-    },
-    resetToken: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    resetTokenExpiration: {
-      type: DataTypes.DATE,
-      allowNull: true,
-    },
-    dateCreate: {
-      type: DataTypes.DATE,
-      defaultValue: DataTypes.NOW,
-    },
-    dateUpdate: {
-      type: DataTypes.DATE,
-      allowNull: true,
-    },
-  },
-  { 
-    sequelize, 
-    tableName: 'users',
-    timestamps: false, 
-  }
-);
+    {
+      sequelize,
+      tableName: 'users', // Certifique-se de que o nome da tabela é 'users'
+      timestamps: false,
+    }
+  );
+
+  // Hook para criptografar a senha antes de salvar no banco
+  Users.addHook('beforeCreate', async (user: Users) => {
+    user.password = await bcrypt.hash(user.password, 10);
+  });
+
+  Users.addHook('beforeUpdate', async (user: Users) => {
+    if (user.changed('password')) {
+      user.password = await bcrypt.hash(user.password, 10);
+    }
+  });
+};
 
 // Definição do modelo Profile
 class Profile extends Model {}
@@ -201,17 +241,17 @@ class UsersHaveProfile extends Model {}
 UsersHaveProfile.init({}, { sequelize, tableName: 'users_have_profile' });
 
 // Configurando associações entre modelos
-User.hasMany(UsersHaveProfile, { foreignKey: 'idUser', onDelete: 'CASCADE' });
+Users.hasMany(UsersHaveProfile, { foreignKey: 'idUser', onDelete: 'CASCADE' });
 Profile.hasMany(UsersHaveProfile, { foreignKey: 'idProfile', onDelete: 'CASCADE' });
-UsersHaveProfile.belongsTo(User, { foreignKey: 'idUser' });
+UsersHaveProfile.belongsTo(Users, { foreignKey: 'idUser' });
 UsersHaveProfile.belongsTo(Profile, { foreignKey: 'idProfile' });
 
 // Sincronizando o banco de dados
-sequelize.sync();
+sequelize.sync({ force: true });
 
 afterAll(() => {
   // Fecha a conexão com o banco após os testes
   sequelize.close();
 });
 
-export { sequelize, User, Profile, UsersHaveProfile };
+export { sequelize, Profile, UsersHaveProfile };

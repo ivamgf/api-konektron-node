@@ -4,18 +4,20 @@ import path from 'path';
 
 // Configuração do transporte de e-mail
 const transporter = nodemailer.createTransport({
-  host: 'smtp.example.com', // Substituir pelo host SMTP real
-  port: 587,
+  host: 'mail.orkneytech.com.br', // Substituir pelo host SMTP real
+  port: 465,
+  secure: false,
   auth: {
-    user: 'your-email@example.com', // Substituir pelo e-mail real
-    pass: 'your-email-password', // Substituir pela senha real
+    user: 'orkneytech@orkneytech.com.br', // Substituir pelo e-mail real
+    pass: '@Ivam202301170', // Substituir pela senha real
   },
+  
 });
 
 // Função para enviar o e-mail de confirmação de cadastro
 export const sendConfirmationEmail = async (user: any): Promise<void> => {
   const templatePath = path.join(__dirname, '../views/confirmationEmail.ejs');
-  const confirmationUrl = `http://localhost:3000/confirm/${user.id}`;
+  const confirmationUrl = `http://localhost:3000/confirm/${user.idUser}`;
 
   const html = await ejs.renderFile(templatePath, { confirmationUrl });
 
@@ -41,3 +43,5 @@ export const sendRecoveryEmail = async (userEmail: string, resetToken: string): 
     html,
   });
 };
+
+
