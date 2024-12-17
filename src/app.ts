@@ -108,6 +108,7 @@ app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/users/:userId', usersRouter);
 app.use('/delete/:userId', usersRouter);
+app.use('/password/:userId', usersRouter);
 app.use('/register', usersRouter);
 app.use("/analysis", analysisRoutes);
 app.use("/requirements", requirementsRoutes);

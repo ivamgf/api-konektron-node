@@ -34,7 +34,9 @@ export const enableUser = async (userId: number): Promise<Users | null> => {
 
 // Função para atualizar a senha do usuário
 export const updateUserPassword = async (userId: number, newPassword: string): Promise<Users> => {
-  const user = await Users.findByPk(userId);
+  const user = await Users.findByPk(userId, {
+    attributes: { exclude: ['resetToken', 'resetTokenExpiration'] }, // Exclui os campos de todos os registros
+  });
   if (!user) {
     throw new Error('Usuário não encontrado.');
   }
