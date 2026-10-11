@@ -7,7 +7,8 @@ const code = z
   .string()
   .trim()
   .toUpperCase()
-  .regex(/^[A-Z0-9._-]{1,20}$/, { error: 'Use até 20 letras, dígitos, ".", "-" ou "_"' });
+  .regex(/^[A-Z0-9._-]{1,20}$/, { error: 'Use até 20 letras, dígitos, ".", "-" ou "_"' })
+  .describe('Único no projeto; convertido para maiúsculas (ex.: "rf1" → "RF1")');
 const title = z.string().trim().min(1).max(200);
 
 export const analysisUpdateSchema = z.object({
@@ -37,11 +38,7 @@ export const userStorySchema = z.object({
   soThat: longText(5000),
   acceptanceCriteria: longText(10_000),
   storyPoints: z
-    .number()
-    .int()
-    .refine((n) => C.STORY_POINTS.includes(n), {
-      error: `Use um destes valores: ${C.STORY_POINTS.join(', ')}`,
-    })
+    .literal(C.STORY_POINTS, { error: `Use um destes valores: ${C.STORY_POINTS.join(', ')}` })
     .nullable()
     .optional(),
   priority: z.enum(C.PRIORITIES).nullable().optional(),

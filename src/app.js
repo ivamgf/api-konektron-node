@@ -27,7 +27,9 @@ app.use(
       res.setHeader('X-Request-Id', id);
       return id;
     },
-    autoLogging: { ignore: (req) => req.url === '/api/v1/health' },
+    autoLogging: {
+      ignore: (req) => req.url === '/api/v1/health' || req.url.startsWith('/api/v1/docs/'),
+    },
   }),
 );
 

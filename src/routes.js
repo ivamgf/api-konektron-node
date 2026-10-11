@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import pkg from '../package.json' with { type: 'json' };
+import { env } from '#config/env.js';
 import { db } from '#database/connection.js';
+import docsRoutes from './docs/docs.routes.js';
 import authRoutes from '#modules/auth/auth.routes.js';
 import profileRoutes from '#modules/profiles/profiles.routes.js';
 import addressRoutes from '#modules/addresses/addresses.routes.js';
@@ -28,5 +30,6 @@ router.use('/admin/users', userRoutes);
 router.use('/admin/logs', logRoutes);
 router.use('/projects', projectRoutes);
 router.use('/engineering', engineeringRoutes);
+if (env.DOCS_ENABLED === 'true') router.use('/docs', docsRoutes);
 
 export default router;

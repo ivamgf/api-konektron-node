@@ -28,6 +28,7 @@ const schema = z.object({
   SMTP_PASSWORD: z.string().optional(),
   MAIL_FROM: z.string().optional(),
   CORS_ORIGINS: z.string().default(''),
+  DOCS_ENABLED: z.enum(['true', 'false']).default('true'),
 });
 
 const parsed = schema.safeParse(process.env);

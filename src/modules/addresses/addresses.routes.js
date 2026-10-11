@@ -1,20 +1,7 @@
 import { Router } from 'express';
-import { z } from 'zod';
 import { authenticate } from '#middlewares/authenticate.js';
 import { crudRouter } from '#shared/crudRouter.js';
-import { optText } from '#shared/schemas.js';
-
-const addressSchema = z.object({
-  street: z.string().trim().min(1).max(200),
-  number: optText(20),
-  complement: optText(200),
-  district: optText(200),
-  city: z.string().trim().min(1).max(200),
-  state: z.string().trim().min(2).max(50),
-  postalCode: optText(20),
-  country: z.string().length(2).toUpperCase().optional(),
-  isPrimary: z.boolean().optional(),
-});
+import { addressSchema } from './addresses.schemas.js';
 
 const router = Router();
 router.use(authenticate);

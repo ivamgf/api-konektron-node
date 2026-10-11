@@ -1,10 +1,12 @@
 {
   "name": "konektron-api",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "description": "API do sistema KonekTron - Engenharia de Software e Análise de Dados",
   "type": "module",
   "license": "MIT",
-  "engines": { "node": ">=24" },
+  "engines": {
+    "node": ">=24"
+  },
   "imports": {
     "#config/*": "./src/config/*",
     "#database/*": "./src/database/*",
@@ -39,6 +41,7 @@
     "pg": "^8.16.0",
     "pino": "^9.7.0",
     "pino-http": "^10.5.0",
+    "swagger-ui-dist": "5.33.0",
     "zod": "^4.1.0"
   },
   "devDependencies": {

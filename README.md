@@ -8,6 +8,7 @@ Node.js 24 · Express 5 · PostgreSQL (Knex) · Zod 4 · JWT.
 ```
 src/
 ├── server.js · app.js · routes.js
+├── docs/          openapi.js (especificação gerada dos schemas Zod), página Swagger UI
 ├── config/        env.js (validação do .env), plans.js (planos e seções)
 ├── database/      connection.js, helpers.js, migrations/, seeds/
 ├── middlewares/   authenticate, authorize, validate, loadProject, errorHandler
@@ -46,6 +47,19 @@ curl http://localhost:3333/api/v1/health
 ```
 
 Outros scripts: `npm test`, `npm run lint`, `npm run migrate:status`, `npm run db:reset`.
+
+## Documentação interativa
+
+Com a API rodando, abra **http://localhost:3333/api/v1/docs/**: Swagger UI com todas as rotas,
+exemplos e *Try it out*. Um login ou cadastro feito pela página já autoriza as chamadas
+seguintes. A especificação OpenAPI 3.1 fica em `/api/v1/docs/openapi.json`, pronta para
+importar no Postman/Insomnia ou gerar um cliente para o front.
+
+A especificação é montada em [src/docs/openapi.js](src/docs/openapi.js) a partir dos mesmos
+schemas Zod que validam as requisições, então corpos, filtros, limites e enums acompanham o
+código. **Ao criar uma rota, registre-a lá**. Os exemplos são validados contra os schemas, e
+`npm test` falha se algum ficar inválido. Para desligar a página (ex.: em produção), use
+`DOCS_ENABLED=false`.
 
 ## Endpoints (`/api/v1`)
 

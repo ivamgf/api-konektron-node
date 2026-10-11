@@ -1,5 +1,21 @@
 # Changelog
 
+## 3.3.0 — 2026-10-11
+
+### Adicionado
+- Página de documentação em `/api/v1/docs/` (Swagger UI servido localmente, sem CDN) e
+  especificação OpenAPI 3.1 em `/api/v1/docs/openapi.json`, gerada dos schemas Zod.
+  Login/cadastro pelo *Try it out* autorizam a página automaticamente.
+- Variável `DOCS_ENABLED` (padrão `true`).
+
+### Alterado
+- Schemas de endereços e de filtro de logs movidos para `*.schemas.js`.
+- `storyPoints` validado com `z.literal` (aparece como enum na documentação).
+
+### Corrigido
+- `.gitignore` ignorava `src/modules/logs/` (a regra `logs/` valia para qualquer pasta), então
+  o módulo de logs ficava fora do repositório e a API não iniciava a partir de um clone.
+
 ## 3.2.0 — 2026-10-11
 
 Incorpora as funcionalidades da API legada (`api-konektron-node` v2, TypeScript/MySQL/Sequelize).

@@ -2,7 +2,7 @@ node_modules/
 .env
 .env.*
 !.env.example
-logs/
-coverage/
+/logs/
+/coverage/
 .DS_Store
 *.sql
