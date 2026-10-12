@@ -116,6 +116,21 @@ automaticamente com o projeto.
 | CRUD | /models | Modeling |
 | CRUD | /models/:modelId/metrics | Evaluation |
 
+### Kanban — `/projects/:projectId/kanban`
+
+Disponível em todos os planos, para qualquer tipo de projeto (migration 000010).
+
+| Método | Rota | Observação |
+|---|---|---|
+| GET | / | quadro: colunas em ordem, cada uma com seus cartões em ordem |
+| CRUD | /columns | `name`, `wipLimit` opcional; nova coluna entra à direita |
+| POST | /columns/:id/move | `{ position }`; devolve o quadro |
+| CRUD | /cards | `columnId`, `title`, `description`, `priority` (`low`…`urgent`), `dueDate`, `assignee`; filtros `?columnId=&priority=` |
+| POST | /cards/:id/move | `{ columnId, position }`; reordena os vizinhos e devolve o quadro |
+
+O PATCH de cartão não muda coluna nem posição: use `/move`. Excluir uma coluna exclui
+seus cartões.
+
 `content` de cada fase guarda as saídas das tarefas do guia CRISP-DM 1.0
 (ex.: `background`, `dataQualityReport`, `testDesign`, `decision`). O PATCH faz *merge*:
 envie só as tarefas que mudaram. A lista de tarefas de cada fase vem em `GET /phases`.

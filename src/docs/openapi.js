@@ -9,6 +9,7 @@ import * as logs from '#modules/logs/logs.schemas.js';
 import * as projects from '#modules/projects/projects.schemas.js';
 import * as sa from '#modules/system-analysis/systemAnalysis.schemas.js';
 import * as dm from '#modules/crisp-dm/crispdm.schemas.js';
+import * as kb from '#modules/kanban/kanban.schemas.js';
 import { PHASES } from '#modules/crisp-dm/crispdm.constants.js';
 
 // Especificação OpenAPI 3.1 gerada a partir dos schemas Zod usados na validação:
@@ -136,7 +137,7 @@ function add(method, path, o) {
 }
 
 // GET/POST na coleção e GET/PATCH/DELETE no item, como o shared/crudRouter
-function crud(base, { tag, name, label, plural, schema, filters, example, errors = [] }) {
+function crud(base, { tag, name, label, plural, schema, updateSchema = schema.partial(), filters, example, errors = [] }) {
   const item = `${base}/{id}`;
   add('get', base, { tag, summary: `Listar ${plural}`, query: filters, errors, response: arrayOf(ref(name)) });
   add('post', base, {
@@ -147,7 +148,7 @@ function crud(base, { tag, name, label, plural, schema, filters, example, errors
     tag,
     summary: `Atualizar ${label}`,
     description: 'Atualização parcial: envie só os campos que mudaram.',
-    body: schema.partial(),
+    body: updateSchema,
     errors: [...errors, 400, 409],
     response: ref(name),
   });
@@ -402,6 +403,37 @@ crud(`${DM}/models/{modelId}/metrics`, {
   example: { metric: 'recall', value: 0.81, split: 'test' },
 });
 
+// ---------- Kanban ----------
+const T_KB = 'Kanban';
+const KB = '/projects/{projectId}/kanban';
+add('get', KB, {
+  tag: T_KB, summary: 'Quadro completo', description: 'Colunas em ordem, cada uma com seus cartões em ordem.',
+  errors: [403], response: ref('KanbanBoard'),
+});
+crud(`${KB}/columns`, {
+  tag: T_KB, name: 'KanbanColumn', label: 'coluna', plural: 'colunas',
+  schema: kb.columnSchema, errors: [403],
+  example: { name: 'Em andamento', wipLimit: 3 },
+});
+add('post', `${KB}/columns/{id}/move`, {
+  tag: T_KB, summary: 'Mover coluna', description: 'Reordena as colunas do quadro e devolve o quadro atualizado.',
+  body: kb.moveColumnSchema, errors: [403], response: ref('KanbanBoard'), example: { position: 0 },
+});
+crud(`${KB}/cards`, {
+  tag: T_KB, name: 'KanbanCard', label: 'cartão', plural: 'cartões',
+  schema: kb.cardSchema, updateSchema: kb.cardUpdateSchema, filters: kb.cardFilters, errors: [403],
+  example: {
+    columnId: '0b0f6d0e-3c1a-4f6e-9d55-1f2a3b4c5d6e', title: 'Tela de agendamento', priority: 'high',
+    dueDate: '2026-11-30', assignee: 'Ana',
+  },
+});
+add('post', `${KB}/cards/{id}/move`, {
+  tag: T_KB, summary: 'Mover cartão',
+  description: 'Muda o cartão de coluna e/ou posição, reordenando os vizinhos. Devolve o quadro atualizado.',
+  body: kb.moveCardSchema, errors: [403], response: ref('KanbanBoard'),
+  example: { columnId: '0b0f6d0e-3c1a-4f6e-9d55-1f2a3b4c5d6e', position: 0 },
+});
+
 // ---------- Schemas de resposta ----------
 const tokens = { accessToken: { type: 'string' }, refreshToken: { type: 'string' } };
 const user = object(
@@ -525,6 +557,11 @@ const schemas = {
   CrispDmPreparationStep: entity(dm.preparationStepSchema, { projectId: uuid }),
   CrispDmModel: entity(dm.modelSchema, { projectId: uuid }),
   CrispDmModelMetric: entity(dm.modelMetricSchema, { modelId: uuid }),
+  KanbanColumn: entity(kb.columnSchema, { projectId: uuid, position: { type: 'integer' } }),
+  KanbanCard: entity(kb.cardSchema, { projectId: uuid, position: { type: 'integer' } }),
+  KanbanBoard: object({
+    columns: arrayOf({ allOf: [ref('KanbanColumn'), object({ cards: arrayOf(ref('KanbanCard')) })] }),
+  }),
 };
 
 // ---------- Documento ----------
@@ -572,6 +609,7 @@ export function buildOpenApi() {
       { name: T_PROJ, description: 'Projetos `software` ou `data_analysis` e catálogo de seções' },
       { name: T_SA, description: 'Requisitos, histórias de usuário e diagramas. Projetos `software`, todos os planos.' },
       { name: T_DM, description: 'Metodologia CRISP-DM. Projetos `data_analysis`, planos Standard e Master.' },
+      { name: T_KB, description: 'Quadro de tarefas com colunas e cartões. Qualquer tipo de projeto, todos os planos.' },
     ],
     paths,
     components: {

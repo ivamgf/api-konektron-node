@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.5.0 — 2026-10-12
+
+### Adicionado
+- Seção **Kanban** (`/projects/:projectId/kanban`), em todos os planos e para qualquer tipo
+  de projeto: quadro com colunas ordenadas (limite WIP opcional) e cartões com prioridade,
+  prazo e responsável. `POST /columns/:id/move` e `POST /cards/:id/move` reordenam os
+  vizinhos numa transação e devolvem o quadro atualizado.
+- Migration 000010 (`kanban_columns`, `kanban_cards`); rotas na documentação OpenAPI.
+
 ## 3.4.0 — 2026-10-11
 
 ### Adicionado

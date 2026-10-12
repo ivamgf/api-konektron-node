@@ -43,7 +43,10 @@ test('troca de senha: confirmação e senha nova diferente da atual', () => {
   );
 });
 
-test('seções implementadas declaram o tipo de projeto exigido', () => {
+test('seções implementadas declaram o tipo de projeto exigido (Kanban serve a qualquer tipo)', () => {
   assert.ok(IMPLEMENTED_SECTIONS.includes(SECTIONS.SYSTEM_ANALYSIS));
-  for (const s of IMPLEMENTED_SECTIONS) assert.ok(SECTION_PROJECT_TYPE[s]);
+  for (const s of IMPLEMENTED_SECTIONS) {
+    if (s === SECTIONS.KANBAN) assert.equal(SECTION_PROJECT_TYPE[s], undefined);
+    else assert.ok(SECTION_PROJECT_TYPE[s]);
+  }
 });

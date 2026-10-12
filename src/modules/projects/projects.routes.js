@@ -5,6 +5,7 @@ import { validate } from '#middlewares/validate.js';
 import { audit } from '#services/auditLog.js';
 import crispdmRoutes from '#modules/crisp-dm/crispdm.routes.js';
 import systemAnalysisRoutes from '#modules/system-analysis/systemAnalysis.routes.js';
+import kanbanRoutes from '#modules/kanban/kanban.routes.js';
 import { createProjectSchema, listQuery, updateProjectSchema } from './projects.schemas.js';
 import { projectsService as s } from './projects.service.js';
 
@@ -36,5 +37,7 @@ router.delete('/:projectId', loadProject(), async (req, res) => {
 // Módulos por tipo de projeto
 router.use('/:projectId/system-analysis', systemAnalysisRoutes);
 router.use('/:projectId/crisp-dm', crispdmRoutes);
+// Módulos para qualquer tipo de projeto
+router.use('/:projectId/kanban', kanbanRoutes);
 
 export default router;
