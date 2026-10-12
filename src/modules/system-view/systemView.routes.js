@@ -9,6 +9,7 @@ import { crudRouter, jsonbFields } from '#shared/crudRouter.js';
 import { idParams } from '#shared/schemas.js';
 import { AppError } from '#utils/AppError.js';
 import * as s from './systemView.schemas.js';
+import { importFromAnalysis } from './systemView.import.js';
 import { systemViewService as svc } from './systemView.service.js';
 
 // Montado em /projects/:projectId/system-view (authenticate já aplicado pelo módulo projects).
@@ -26,6 +27,11 @@ router.get('/', async (req, res) => res.json(await svc.overview(req.project)));
 router.get('/report', async (req, res) => res.json(await svc.report(req.project)));
 router.get('/features', validate({ query: s.langQuery }), async (req, res) =>
   res.json(await svc.features(req.project.id, req.validated.query.lang)),
+);
+
+// Importa dados de um projeto da Análise de Sistemas (ou gera rascunhos a partir do próprio)
+router.post('/import', validate({ body: s.importSchema }), async (req, res) =>
+  res.status(req.validated.body.dryRun ? 200 : 201).json(await importFromAnalysis(req.project, req.user, req.validated.body)),
 );
 
 router.get('/spec', async (req, res) => res.json(await svc.getSpec(req.project.id)));

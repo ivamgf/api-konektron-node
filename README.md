@@ -127,6 +127,7 @@ os casos de uso no modelo de Guedes (*UML 2*, tab. 3.1) e os cenários BDD.
 |---|---|---|
 | GET | / | contagens e lacunas de rastreabilidade (RF sem caso de uso, histórias sem cenário) |
 | GET | /report | documento de especificação completo (versão UML) |
+| POST | /import | traz dados de um projeto da Análise de Sistemas (o próprio ou outro) e gera rascunhos; `dryRun` = prévia |
 | GET | /features?lang= | arquivos `.feature` (Gherkin) por história, em `pt-BR`, `en` ou `es` |
 | GET · PATCH | /spec | finalidade, perspectiva do produto, usuários, restrições, suposições... |
 | CRUD | /stakeholders · /glossary | stakeholders (P1...) e conceitos do domínio (C1...) |

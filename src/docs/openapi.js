@@ -424,6 +424,18 @@ add('get', `${SV}/features`, {
   query: sv.langQuery, errors: sectionErrors,
   response: arrayOf(object({ name: { type: 'string' }, userStoryId: nullable(uuid), content: { type: 'string' } })),
 });
+add('post', `${SV}/import`, {
+  tag: T_SV, summary: 'Importar da Análise de Sistemas',
+  description:
+    'Traz requisitos, histórias, diagramas e a análise de outro projeto software do usuário (ou só gera rascunhos a partir ' +
+    'do próprio projeto) e, opcionalmente, a Visão de Sistema já feita nele. Gera um caso de uso por requisito funcional sem ' +
+    'caso de uso (ator e cenário principal vindos da história vinculada) e stakeholders a partir dos papéis das histórias. ' +
+    'Nada é sobrescrito: códigos existentes são pulados e campos de texto só são preenchidos se estiverem vazios. ' +
+    'Com `dryRun: true` devolve a prévia sem gravar (200).',
+  body: sv.importSchema, status: 201, errors: [...sectionErrors],
+  response: { type: 'object', description: 'Resumo: criados e pulados por tipo, casos de uso e stakeholders gerados' },
+  example: { sourceProjectId: '0b0f6d0e-3c1a-4f6e-9d55-1f2a3b4c5d6e', dryRun: true, systemView: false },
+});
 add('get', `${SV}/spec`, { tag: T_SV, summary: 'Obter as definições do software', errors: sectionErrors, response: ref('SystemSpec') });
 add('patch', `${SV}/spec`, {
   tag: T_SV, summary: 'Atualizar as definições do software', body: sv.specUpdateSchema, errors: [...sectionErrors, 400],

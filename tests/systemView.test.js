@@ -100,3 +100,11 @@ test('OpenAPI documenta a Visão de Sistema', () => {
     assert.ok(paths[`/projects/{projectId}/system-view${p}`], p || '/');
   }
 });
+
+test('importação: origem obrigatória, partes opcionais (padrão: tudo) e rota documentada', async () => {
+  const { importSchema } = await import('#modules/system-view/systemView.schemas.js');
+  assert.equal(importSchema.safeParse({}).success, false);
+  assert.deepEqual(importSchema.parse({ sourceProjectId: id(1) }), { sourceProjectId: id(1) });
+  assert.equal(importSchema.safeParse({ sourceProjectId: id(1), dryRun: 'sim' }).success, false);
+  assert.ok(buildOpenApi().paths['/projects/{projectId}/system-view/import'].post);
+});

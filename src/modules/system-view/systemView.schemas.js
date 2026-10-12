@@ -97,3 +97,18 @@ export const scenarioFilters = z.object({
 });
 
 export const langQuery = z.object({ lang: z.enum(GHERKIN_LANGS).optional() });
+
+// Importação a partir de um projeto da Análise de Sistemas (o próprio ou outro projeto software)
+const part = (what) => z.boolean().optional().describe(`${what} (padrão: true)`);
+export const importSchema = z.object({
+  sourceProjectId: z.uuid().describe('Projeto de origem; o próprio projeto só gera os rascunhos'),
+  lang: z.enum(GHERKIN_LANGS).optional().describe('Idioma dos textos gerados (ator padrão, título do cenário)'),
+  dryRun: z.boolean().optional().describe('true = só mostra o que seria criado, sem gravar'),
+  analysis: part('Preencher objetivo/escopo vazios com os da origem'),
+  requirements: part('Copiar requisitos (códigos existentes são mantidos)'),
+  userStories: part('Copiar histórias de usuário'),
+  diagrams: part('Copiar diagramas'),
+  systemView: part('Copiar a Visão de Sistema da origem (definições, stakeholders, glossário, casos de uso, cenários BDD)'),
+  generateUseCases: part('Gerar um caso de uso por requisito funcional sem caso de uso'),
+  generateStakeholders: part('Gerar stakeholders a partir dos papéis "Como ..." das histórias'),
+});

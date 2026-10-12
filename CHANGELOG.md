@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.8.0 — 2026-10-13
+
+### Adicionado
+- `POST /projects/:projectId/system-view/import`: monta a Visão de Sistema a partir de um projeto da
+  Análise de Sistemas — o próprio ou outro projeto `software` do usuário (o admin pode usar qualquer um).
+  Copia análise, requisitos, histórias, diagramas e, se houver, a Visão de Sistema da origem, religando
+  os vínculos (requisitos, generalização, histórias, cenários, `«include»`/`«extend»`). Gera um caso de
+  uso por requisito funcional sem caso de uso (ator e cenário principal vindos da história vinculada) e
+  stakeholders a partir dos papéis das histórias. Nada é sobrescrito; `dryRun: true` devolve a prévia.
+
 ## 3.7.0 — 2026-10-13
 
 ### Adicionado
