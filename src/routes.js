@@ -12,6 +12,18 @@ import projectRoutes from '#modules/projects/projects.routes.js';
 import engineeringRoutes from '#modules/engineering/engineering.routes.js';
 
 const router = Router();
+const docsEnabled = env.DOCS_ENABLED === 'true';
+
+// Raiz da API: o que é e por onde começar
+router.get('/', (req, res) => {
+  const base = req.baseUrl;
+  res.json({
+    name: 'KonekTron API',
+    version: pkg.version,
+    health: `${base}/health`,
+    ...(docsEnabled && { docs: `${base}/docs/`, openapi: `${base}/docs/openapi.json` }),
+  });
+});
 
 router.get('/health', async (_req, res) => {
   const base = { version: pkg.version, uptime: Math.round(process.uptime()), node: process.version };
@@ -30,6 +42,6 @@ router.use('/admin/users', userRoutes);
 router.use('/admin/logs', logRoutes);
 router.use('/projects', projectRoutes);
 router.use('/engineering', engineeringRoutes);
-if (env.DOCS_ENABLED === 'true') router.use('/docs', docsRoutes);
+if (docsEnabled) router.use('/docs', docsRoutes);
 
 export default router;

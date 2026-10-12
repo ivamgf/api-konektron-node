@@ -33,6 +33,7 @@ app.use(
   }),
 );
 
+app.get('/', (_req, res) => res.redirect('/api/v1'));
 app.use('/api/v1', routes);
 
 app.use(notFound);

@@ -14,6 +14,8 @@
 - README: como acessar o banco da HostGator de fora (túnel SSH ou porta pública) e deploy com Docker.
 
 ### Corrigido
+- `GET /api/v1` respondia 404; agora devolve nome, versão e links de saúde e documentação,
+  e a raiz `/` redireciona para ele.
 - `birth_date` do perfil passa a ser criada pela migration 000009. Antes ela tinha sido incluída
   na 000004 já aplicada, então bancos existentes ficavam sem a coluna e `/profiles/me` falhava.
 

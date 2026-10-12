@@ -155,6 +155,19 @@ function crud(base, { tag, name, label, plural, schema, filters, example, errors
 }
 
 // ---------- Sistema ----------
+add('get', '/', {
+  tag: 'Sistema',
+  auth: false,
+  summary: 'Identificação da API',
+  description: 'Nome, versão e os links de saúde e documentação. A raiz do servidor (`/`) redireciona para cá.',
+  response: object({
+    name: { type: 'string' },
+    version: { type: 'string' },
+    health: { type: 'string' },
+    docs: { type: 'string' },
+    openapi: { type: 'string' },
+  }),
+});
 add('get', '/health', {
   tag: 'Sistema',
   auth: false,
