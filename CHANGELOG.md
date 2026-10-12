@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.6.0 — 2026-10-12
+
+### Adicionado
+- Espanhol: o perfil aceita `locale: "es"` e as fases do CRISP-DM trazem o nome em `es`.
+
+### Alterado
+- Português (`pt-BR`) passa a ser o idioma padrão dos perfis novos (migration 000011);
+  perfis existentes mantêm o idioma que têm.
+
 ## 3.5.0 — 2026-10-12
 
 ### Adicionado

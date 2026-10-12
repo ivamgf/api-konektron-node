@@ -4,7 +4,7 @@ export const PHASES = Object.freeze([
   {
     key: 'business_understanding',
     order: 1,
-    label: { en: 'Business Understanding', 'pt-BR': 'Entendimento do Negócio' },
+    label: { en: 'Business Understanding', 'pt-BR': 'Entendimento do Negócio', es: 'Comprensión del Negocio' },
     tasks: [
       'background', 'businessSuccessCriteria', 'inventoryOfResources', 'requirements',
       'assumptions', 'constraints', 'risksAndContingencies', 'terminology',
@@ -14,7 +14,7 @@ export const PHASES = Object.freeze([
   {
     key: 'data_understanding',
     order: 2,
-    label: { en: 'Data Understanding', 'pt-BR': 'Entendimento dos Dados' },
+    label: { en: 'Data Understanding', 'pt-BR': 'Entendimento dos Dados', es: 'Comprensión de los Datos' },
     tasks: [
       'initialDataCollectionReport', 'dataDescriptionReport',
       'dataExplorationReport', 'dataQualityReport',
@@ -23,7 +23,7 @@ export const PHASES = Object.freeze([
   {
     key: 'data_preparation',
     order: 3,
-    label: { en: 'Data Preparation', 'pt-BR': 'Preparação dos Dados' },
+    label: { en: 'Data Preparation', 'pt-BR': 'Preparação dos Dados', es: 'Preparación de los Datos' },
     tasks: [
       'rationaleForInclusionExclusion', 'dataCleaningReport', 'derivedAttributes',
       'generatedRecords', 'mergedData', 'reformattedData', 'datasetDescription',
@@ -32,7 +32,7 @@ export const PHASES = Object.freeze([
   {
     key: 'modeling',
     order: 4,
-    label: { en: 'Modeling', 'pt-BR': 'Modelagem' },
+    label: { en: 'Modeling', 'pt-BR': 'Modelagem', es: 'Modelado' },
     tasks: [
       'modelingTechnique', 'modelingAssumptions', 'testDesign',
       'parameterSettings', 'modelDescription', 'modelAssessment',
@@ -41,13 +41,13 @@ export const PHASES = Object.freeze([
   {
     key: 'evaluation',
     order: 5,
-    label: { en: 'Evaluation', 'pt-BR': 'Avaliação' },
+    label: { en: 'Evaluation', 'pt-BR': 'Avaliação', es: 'Evaluación' },
     tasks: ['assessmentOfResults', 'approvedModels', 'reviewOfProcess', 'listOfPossibleActions', 'decision'],
   },
   {
     key: 'deployment',
     order: 6,
-    label: { en: 'Deployment', 'pt-BR': 'Implantação' },
+    label: { en: 'Deployment', 'pt-BR': 'Implantação', es: 'Despliegue' },
     tasks: [
       'deploymentPlan', 'monitoringAndMaintenancePlan', 'finalReport',
       'finalPresentation', 'experienceDocumentation',
