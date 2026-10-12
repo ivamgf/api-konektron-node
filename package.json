@@ -1,6 +1,6 @@
 {
   "name": "konektron-api",
-  "version": "3.3.0",
+  "version": "3.4.0",
   "description": "API do sistema KonekTron - Engenharia de Software e Análise de Dados",
   "type": "module",
   "license": "MIT",
@@ -19,10 +19,12 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
+    "start:prod": "knex migrate:latest && node src/server.js",
     "migrate": "knex migrate:latest",
     "migrate:rollback": "knex migrate:rollback",
     "migrate:status": "knex migrate:status",
     "migrate:make": "knex migrate:make",
+    "db:check": "node scripts/db-check.js",
     "seed": "knex seed:run",
     "db:reset": "knex migrate:rollback --all && knex migrate:latest && knex seed:run",
     "lint": "eslint .",

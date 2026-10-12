@@ -13,7 +13,6 @@ export async function up(knex) {
     t.string('company', 200);
     t.string('department', 200);
     t.string('job_title', 200);
-    t.date('birth_date');
     t.string('locale', 10).notNullable().defaultTo('en'); // RNF5
     t.timestamps(true, true);
   });

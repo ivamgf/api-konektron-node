@@ -1,5 +1,19 @@
 # Changelog
 
+## 3.4.0 — 2026-10-11
+
+### Adicionado
+- `DATABASE_URL` (formato dos painéis de hospedagem), com prioridade sobre as variáveis `DB_*`.
+- `npm run db:check`: testa a conexão, mostra a versão do PostgreSQL e as migrations pendentes,
+  com dicas para host não encontrado, porta fechada, senha e banco inexistente.
+- `Dockerfile` e `.dockerignore` para o deploy no painel da VPS; `npm run start:prod` aplica
+  as migrations antes de subir a API.
+- README: como acessar o banco da HostGator de fora (túnel SSH ou porta pública) e deploy com Docker.
+
+### Corrigido
+- `birth_date` do perfil passa a ser criada pela migration 000009. Antes ela tinha sido incluída
+  na 000004 já aplicada, então bancos existentes ficavam sem a coluna e `/profiles/me` falhava.
+
 ## 3.3.0 — 2026-10-11
 
 ### Adicionado

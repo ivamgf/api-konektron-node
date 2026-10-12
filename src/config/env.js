@@ -6,30 +6,44 @@ try {
   // sem .env: usa as variáveis do ambiente
 }
 
-const schema = z.object({
-  NODE_ENV: z.enum(['development', 'homologation', 'production', 'test']).default('development'),
-  PORT: z.coerce.number().int().default(3333),
-  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).optional(),
-  APP_URL: z.url(),
-  API_URL: z.url(),
-  DB_HOST: z.string().min(1),
-  DB_PORT: z.coerce.number().int().default(5432),
-  DB_NAME: z.string().min(1),
-  DB_USER: z.string().min(1),
-  DB_PASSWORD: z.string(),
-  DB_SSL: z.enum(['true', 'false']).default('false'),
-  JWT_ACCESS_SECRET: z.string().min(32, { error: 'precisa ter ao menos 32 caracteres' }),
-  JWT_ACCESS_EXPIRES: z.string().default('15m'),
-  JWT_REFRESH_EXPIRES_DAYS: z.coerce.number().int().positive().default(30),
-  SMTP_HOST: z.string().optional(),
-  SMTP_PORT: z.coerce.number().int().optional(),
-  SMTP_SECURE: z.enum(['true', 'false']).default('true'),
-  SMTP_USER: z.string().optional(),
-  SMTP_PASSWORD: z.string().optional(),
-  MAIL_FROM: z.string().optional(),
-  CORS_ORIGINS: z.string().default(''),
-  DOCS_ENABLED: z.enum(['true', 'false']).default('true'),
-});
+const optionalText = z.string().trim().min(1).optional();
+
+const schema = z
+  .object({
+    NODE_ENV: z.enum(['development', 'homologation', 'production', 'test']).default('development'),
+    PORT: z.coerce.number().int().default(3333),
+    LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).optional(),
+    APP_URL: z.url(),
+    API_URL: z.url(),
+    // Banco: DATABASE_URL ou o conjunto DB_* (ver knexfile.js)
+    DATABASE_URL: z
+      .string()
+      .regex(/^postgres(ql)?:\/\//, {
+        error: 'use o formato postgres://usuario:senha@host:porta/banco',
+      })
+      .optional(),
+    DB_HOST: optionalText,
+    DB_PORT: z.coerce.number().int().default(5432),
+    DB_NAME: optionalText,
+    DB_USER: optionalText,
+    DB_PASSWORD: z.string().optional(),
+    DB_SSL: z.enum(['true', 'false']).default('false'),
+    JWT_ACCESS_SECRET: z.string().min(32, { error: 'precisa ter ao menos 32 caracteres' }),
+    JWT_ACCESS_EXPIRES: z.string().default('15m'),
+    JWT_REFRESH_EXPIRES_DAYS: z.coerce.number().int().positive().default(30),
+    SMTP_HOST: z.string().optional(),
+    SMTP_PORT: z.coerce.number().int().optional(),
+    SMTP_SECURE: z.enum(['true', 'false']).default('true'),
+    SMTP_USER: z.string().optional(),
+    SMTP_PASSWORD: z.string().optional(),
+    MAIL_FROM: z.string().optional(),
+    CORS_ORIGINS: z.string().default(''),
+    DOCS_ENABLED: z.enum(['true', 'false']).default('true'),
+  })
+  .refine((e) => e.DATABASE_URL || (e.DB_HOST && e.DB_NAME && e.DB_USER), {
+    error: 'defina DATABASE_URL ou DB_HOST, DB_NAME e DB_USER',
+    path: ['DATABASE_URL'],
+  });
 
 const parsed = schema.safeParse(process.env);
 if (!parsed.success) {
@@ -43,5 +57,7 @@ export const env = Object.freeze({
   ...data,
   isProd: data.NODE_ENV === 'production',
   isTest: data.NODE_ENV === 'test',
-  corsOrigins: data.CORS_ORIGINS.split(',').map((s) => s.trim()).filter(Boolean),
+  corsOrigins: data.CORS_ORIGINS.split(',')
+    .map((s) => s.trim())
+    .filter(Boolean),
 });

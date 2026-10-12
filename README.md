@@ -46,7 +46,8 @@ npm run dev
 curl http://localhost:3333/api/v1/health
 ```
 
-Outros scripts: `npm test`, `npm run lint`, `npm run migrate:status`, `npm run db:reset`.
+Outros scripts: `npm test`, `npm run lint`, `npm run migrate:status`, `npm run db:reset` e
+`npm run db:check` (testa a conexão com o banco do `.env` e mostra as migrations pendentes).
 
 ## Documentação interativa
 
@@ -127,9 +128,41 @@ curl -X PATCH $API/projects/$ID/crisp-dm/phases/evaluation \
   -d '{"status":"completed","content":{"assessmentOfResults":"Recall 0.81","decision":"deploy"}}'
 ```
 
+## Banco na HostGator
+
+O banco roda como serviço Docker no painel da VPS. O endereço que o painel mostra como
+**host interno** (ex.: `konektron_konektron_database`) só existe dentro da rede Docker do
+servidor: funciona para a API instalada lá, mas não do seu computador.
+
+| Onde a API roda | `DATABASE_URL` |
+| --- | --- |
+| No painel, no mesmo projeto do banco | URL interna do painel (`postgres://…@konektron_konektron_database:5432/…`) |
+| No seu computador, via túnel SSH | `postgres://…@127.0.0.1:5433/…` com o túnel aberto (abaixo) |
+| No seu computador, via porta pública | `postgres://…@<IP da VPS>:<porta pública>/…` |
+
+**Túnel SSH (recomendado):** o banco continua fechado para a internet. Descubra o IP do
+contêiner do banco no servidor e deixe o túnel aberto em outro terminal:
+
+```bash
+ssh <usuario>@<IP da VPS> "docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' \$(docker ps -qf name=konektron_konektron_database)"
+ssh -N -L 5433:<IP do contêiner>:5432 <usuario>@<IP da VPS>
+npm run db:check
+```
+
+**Porta pública:** no serviço do banco, publique a porta 5432 em uma porta externa e libere
+no firewall **apenas o seu IP**. Com senha fraca, um Postgres aberto para a internet é
+invadido em horas.
+
 ## Deploy na VPS (HostGator)
 
-Postgres na própria VPS (escutando em localhost), Node 24 via nvm, PM2
-(`pm2 start ecosystem.config.cjs --env production`) e Nginx como proxy reverso com
-HTTPS (Let's Encrypt) para a porta 3333. Bancos separados para homologação e produção (RNF7).
-A extensão `citext` precisa estar disponível (pacote `postgresql-contrib`).
+**Com o painel (Docker):** crie um app no mesmo projeto do banco apontando para este
+repositório; o `Dockerfile` instala as dependências, aplica as migrations ao iniciar
+(`npm run start:prod`) e informa a saúde em `/api/v1/health`. Configure no painel as
+variáveis do `.env.example` (com `NODE_ENV=production` e a `DATABASE_URL` interna), a porta
+3333 e o domínio com HTTPS.
+
+**Sem Docker:** Node 24 via nvm, PM2 (`pm2 start ecosystem.config.cjs --env production`) e
+Nginx como proxy reverso com HTTPS (Let's Encrypt) para a porta 3333.
+
+Em ambos: bancos separados para homologação e produção (RNF7), e a extensão `citext`
+disponível (já vem na imagem oficial do Postgres; fora dela, pacote `postgresql-contrib`).
