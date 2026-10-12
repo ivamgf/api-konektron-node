@@ -1,0 +1,15 @@
+# Postgres local para desenvolvimento (produção fica na VPS HostGator)
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: konektron-postgres
+    environment:
+      POSTGRES_DB: konektron_dev
+      POSTGRES_USER: konektron
+      POSTGRES_PASSWORD: troque_esta_senha
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:

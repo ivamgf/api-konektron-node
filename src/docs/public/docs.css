@@ -1,0 +1,109 @@
+/* Identidade visual da página de documentação (por cima do tema padrão do Swagger UI) */
+:root {
+  --kt-ink: #14213d;
+  --kt-accent: #2f6fde;
+  --kt-muted: #c9d3e6;
+}
+
+body {
+  margin: 0;
+  background: #fafbfc;
+}
+
+.kt-header {
+  background: var(--kt-ink);
+  color: #fff;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+.kt-header__inner {
+  max-width: 1460px;
+  margin: 0 auto;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+.kt-brand {
+  font-size: 1.25rem;
+  letter-spacing: 0.01em;
+}
+
+.kt-brand strong {
+  color: #7fb0ff;
+}
+
+.kt-brand__sub {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  margin-left: 6px;
+  border: 1px solid var(--kt-muted);
+  border-radius: 999px;
+  vertical-align: middle;
+}
+
+.kt-nav {
+  display: flex;
+  gap: 18px;
+}
+
+.kt-nav a {
+  color: var(--kt-muted);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.kt-nav a:hover,
+.kt-nav a:focus-visible {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.kt-noscript {
+  max-width: 1460px;
+  margin: 24px auto;
+  padding: 0 20px;
+  font-family: system-ui, sans-serif;
+}
+
+/* Ajustes no Swagger UI */
+.swagger-ui .info {
+  margin: 32px 0 24px;
+}
+
+.swagger-ui .info .title {
+  color: var(--kt-ink);
+}
+
+.swagger-ui .info .markdown table {
+  border-collapse: collapse;
+}
+
+.swagger-ui .info .markdown td,
+.swagger-ui .info .markdown th {
+  padding: 4px 12px;
+  border: 1px solid #e3e7ef;
+}
+
+.swagger-ui .btn.authorize {
+  color: var(--kt-accent);
+  border-color: var(--kt-accent);
+}
+
+.swagger-ui .btn.authorize svg {
+  fill: var(--kt-accent);
+}
+
+@media (max-width: 600px) {
+  .kt-header__inner {
+    padding: 12px 16px;
+  }
+
+  .kt-nav {
+    gap: 12px;
+  }
+}
