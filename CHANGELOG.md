@@ -6,6 +6,9 @@
 - `DATABASE_URL` (formato dos painéis de hospedagem), com prioridade sobre as variáveis `DB_*`.
 - `npm run db:check`: testa a conexão, mostra a versão do PostgreSQL e as migrations pendentes,
   com dicas para host não encontrado, porta fechada, senha e banco inexistente.
+- `npm run db:tunnel`: abre um túnel SSH até o Postgres do EasyPanel sem expor a porta,
+  localizando o contêiner sozinho (variáveis `SSH_HOST`, `SSH_USER`, `SSH_PORT`,
+  `DB_CONTAINER`, `TUNNEL_PORT`).
 - `Dockerfile` e `.dockerignore` para o deploy no painel da VPS; `npm run start:prod` aplica
   as migrations antes de subir a API.
 - README: como acessar o banco da HostGator de fora (túnel SSH ou porta pública) e deploy com Docker.

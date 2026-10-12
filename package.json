@@ -25,6 +25,7 @@
     "migrate:status": "knex migrate:status",
     "migrate:make": "knex migrate:make",
     "db:check": "node scripts/db-check.js",
+    "db:tunnel": "node scripts/db-tunnel.js",
     "seed": "knex seed:run",
     "db:reset": "knex migrate:rollback --all && knex migrate:latest && knex seed:run",
     "lint": "eslint .",

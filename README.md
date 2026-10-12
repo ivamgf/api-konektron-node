@@ -140,13 +140,23 @@ servidor: funciona para a API instalada lá, mas não do seu computador.
 | No seu computador, via túnel SSH | `postgres://…@127.0.0.1:5433/…` com o túnel aberto (abaixo) |
 | No seu computador, via porta pública | `postgres://…@<IP da VPS>:<porta pública>/…` |
 
-**Túnel SSH (recomendado):** o banco continua fechado para a internet. Descubra o IP do
-contêiner do banco no servidor e deixe o túnel aberto em outro terminal:
+**Túnel SSH (recomendado):** o banco continua fechado para a internet. Preencha `SSH_HOST`
+(e, se preciso, `SSH_USER`, `SSH_PORT`, `DB_CONTAINER`, `TUNNEL_PORT`) no `.env`, ative a
+`DATABASE_URL` com `127.0.0.1:5433` e rode:
 
 ```bash
-ssh <usuario>@<IP da VPS> "docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' \$(docker ps -qf name=konektron_konektron_database)"
-ssh -N -L 5433:<IP do contêiner>:5432 <usuario>@<IP da VPS>
-npm run db:check
+npm run db:tunnel      # deixe aberto; Ctrl+C fecha
+npm run db:check       # em outro terminal
+```
+
+O script entra no servidor, localiza o contêiner do banco (no Docker Swarm do EasyPanel, pelo
+IP da `docker_gwbridge`, que o host alcança) e abre o túnel. Sem chave SSH, a senha é pedida
+duas vezes; para não digitar, crie uma chave uma única vez:
+
+```bash
+ssh-keygen -t ed25519                                        # Enter em tudo
+type $env:USERPROFILE\.ssh\id_ed25519.pub | ssh root@<IP da VPS> "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys"   # PowerShell
+ssh-copy-id root@<IP da VPS>                                 # Linux/macOS
 ```
 
 **Porta pública:** no serviço do banco, publique a porta 5432 em uma porta externa e libere
