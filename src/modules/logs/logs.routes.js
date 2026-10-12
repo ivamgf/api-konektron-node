@@ -10,17 +10,22 @@ router.use(authenticate, requireRole('admin'));
 
 router.get('/', validate({ query: listQuery }), async (req, res) => {
   const { page, pageSize, userId, action, from, to } = req.validated.query;
-  const q = db('audit_logs as l')
-    .leftJoin('users as u', 'u.id', 'l.userId')
-    .select('l.*', 'u.email')
-    .orderBy('l.createdAt', 'desc')
-    .limit(pageSize)
-    .offset((page - 1) * pageSize);
+  const q = db('audit_logs as l');
   if (userId) q.where('l.userId', userId);
   if (action) q.where('l.action', action);
   if (from) q.where('l.createdAt', '>=', from);
   if (to) q.where('l.createdAt', '<=', to);
-  res.json({ data: await q, page, pageSize });
+
+  const [[{ total }], data] = await Promise.all([
+    q.clone().count({ total: '*' }),
+    q
+      .leftJoin('users as u', 'u.id', 'l.userId')
+      .select('l.*', 'u.email')
+      .orderBy('l.createdAt', 'desc')
+      .limit(pageSize)
+      .offset((page - 1) * pageSize),
+  ]);
+  res.json({ data, page, pageSize, total: Number(total) });
 });
 
 // Resumo para o dashboard do admin (UC005)
