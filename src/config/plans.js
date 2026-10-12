@@ -14,11 +14,14 @@ export const SECTIONS = Object.freeze({
 });
 
 // Seções já implementadas na API (as demais respondem 501)
-export const IMPLEMENTED_SECTIONS = Object.freeze([SECTIONS.SYSTEM_ANALYSIS, SECTIONS.CRISP_DM, SECTIONS.KANBAN]);
+export const IMPLEMENTED_SECTIONS = Object.freeze([
+  SECTIONS.SYSTEM_ANALYSIS, SECTIONS.SYSTEM_VIEW, SECTIONS.CRISP_DM, SECTIONS.KANBAN,
+]);
 
 // Tipo de projeto exigido por cada seção implementada; as ausentes (Kanban) servem a qualquer tipo
 export const SECTION_PROJECT_TYPE = Object.freeze({
   [SECTIONS.SYSTEM_ANALYSIS]: 'software',
+  [SECTIONS.SYSTEM_VIEW]: 'software', // extensão da Análise de Sistemas
   [SECTIONS.CRISP_DM]: 'data_analysis',
 });
 

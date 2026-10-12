@@ -10,6 +10,7 @@ import * as projects from '#modules/projects/projects.schemas.js';
 import * as sa from '#modules/system-analysis/systemAnalysis.schemas.js';
 import * as dm from '#modules/crisp-dm/crispdm.schemas.js';
 import * as kb from '#modules/kanban/kanban.schemas.js';
+import * as sv from '#modules/system-view/systemView.schemas.js';
 import { PHASES } from '#modules/crisp-dm/crispdm.constants.js';
 
 // Especificação OpenAPI 3.1 gerada a partir dos schemas Zod usados na validação:
@@ -79,6 +80,7 @@ const PATH_PARAMS = {
   projectId: 'ID do projeto',
   datasetId: 'ID do dataset',
   modelId: 'ID do modelo',
+  useCaseId: 'ID do caso de uso',
 };
 
 // ---------- Registro das operações ----------
@@ -403,6 +405,71 @@ crud(`${DM}/models/{modelId}/metrics`, {
   example: { metric: 'recall', value: 0.81, split: 'test' },
 });
 
+// ---------- Visão de Sistema ----------
+const T_SV = 'Visão de Sistema';
+const SV = '/projects/{projectId}/system-view';
+add('get', SV, {
+  tag: T_SV, summary: 'Visão geral',
+  description: 'Contagens e lacunas de rastreabilidade: requisitos funcionais sem caso de uso, casos de uso sem cenário principal e histórias sem cenário BDD.',
+  errors: sectionErrors, response: ref('SystemViewOverview'),
+});
+add('get', `${SV}/report`, {
+  tag: T_SV, summary: 'Documento de especificação (versão UML)',
+  description: 'Definições, stakeholders, glossário, requisitos, casos de uso com cenários e relações, diagramas de caso de uso, histórias e cenários BDD.',
+  errors: sectionErrors, response: { type: 'object' },
+});
+add('get', `${SV}/features`, {
+  tag: T_SV, summary: 'Funcionalidades Gherkin (versão BDD)',
+  description: 'Um arquivo .feature por história de usuário, com palavras-chave no idioma pedido (`lang`: pt-BR, en, es).',
+  query: sv.langQuery, errors: sectionErrors,
+  response: arrayOf(object({ name: { type: 'string' }, userStoryId: nullable(uuid), content: { type: 'string' } })),
+});
+add('get', `${SV}/spec`, { tag: T_SV, summary: 'Obter as definições do software', errors: sectionErrors, response: ref('SystemSpec') });
+add('patch', `${SV}/spec`, {
+  tag: T_SV, summary: 'Atualizar as definições do software', body: sv.specUpdateSchema, errors: [...sectionErrors, 400],
+  response: ref('SystemSpec'), example: { purpose: 'Agendar atendimentos sem ligar para a recepção.', responsible: 'Ana Souza' },
+});
+crud(`${SV}/stakeholders`, {
+  tag: T_SV, name: 'Stakeholder', label: 'stakeholder', plural: 'stakeholders', schema: sv.stakeholderSchema, errors: sectionErrors,
+  example: { code: 'P1', name: 'Recepcionista', role: 'Atendimento', interest: 'Menos ligações para agendar.' },
+});
+crud(`${SV}/glossary`, {
+  tag: T_SV, name: 'GlossaryTerm', label: 'termo do glossário', plural: 'termos do glossário', schema: sv.glossarySchema, errors: sectionErrors,
+  example: { code: 'C1', term: 'Atendimento', definition: 'Horário reservado por um cliente para um serviço.' },
+});
+crud(`${SV}/use-cases`, {
+  tag: T_SV, name: 'UseCase', label: 'caso de uso', plural: 'casos de uso', schema: sv.useCaseSchema, errors: sectionErrors,
+  example: {
+    code: 'UC001', name: 'Agendar atendimento', primaryActor: 'Cliente', summary: 'O cliente reserva um horário livre.',
+    preconditions: 'O cliente está autenticado', postconditions: 'O horário fica reservado', restrictions: 'Só horários futuros',
+  },
+});
+paths[`${SV}/use-cases/{id}`].get.summary = 'Obter caso de uso com cenários e relações';
+paths[`${SV}/use-cases/{id}`].get.responses[200].content['application/json'].schema = ref('UseCaseDetail');
+add('post', `${SV}/use-cases/{id}/scenarios`, {
+  tag: T_SV, summary: 'Gerar cenários BDD a partir do caso de uso',
+  description: 'O cenário principal e cada cenário alternativo ou de exceção viram um cenário BDD (Dado = pré-condições, Quando = ações do ator, Então = ações do sistema). Cenários já gerados, com o mesmo título, não são duplicados.',
+  query: sv.langQuery, body: z.object({ userStoryId: z.uuid().nullable().optional() }), status: 201,
+  errors: [...sectionErrors], response: arrayOf(ref('BddScenario')),
+});
+crud(`${SV}/use-cases/{useCaseId}/flows`, {
+  tag: T_SV, name: 'UseCaseFlow', label: 'cenário do caso de uso', plural: 'cenários do caso de uso', schema: sv.flowSchema, errors: sectionErrors,
+  example: {
+    kind: 'main', title: 'Cenário principal',
+    steps: [{ actor: 'Escolhe serviço e data', system: '' }, { actor: '', system: 'Mostra os horários livres' }],
+  },
+});
+crud(`${SV}/relations`, {
+  tag: T_SV, name: 'UseCaseRelation', label: 'relação entre casos de uso', plural: 'relações <<include>>/<<extend>>',
+  schema: sv.relationSchema, errors: sectionErrors,
+  example: { fromUseCaseId: '0b0f6d0e-3c1a-4f6e-9d55-1f2a3b4c5d6e', toUseCaseId: '1c1f6d0e-3c1a-4f6e-9d55-1f2a3b4c5d6e', type: 'include' },
+});
+crud(`${SV}/scenarios`, {
+  tag: T_SV, name: 'BddScenario', label: 'cenário BDD', plural: 'cenários BDD', schema: sv.scenarioSchema, filters: sv.scenarioFilters,
+  errors: sectionErrors,
+  example: { title: 'Agendar em horário livre', given: 'que estou autenticado', when: 'escolho um horário livre', then: 'recebo a confirmação por e-mail' },
+});
+
 // ---------- Kanban ----------
 const T_KB = 'Kanban';
 const KB = '/projects/{projectId}/kanban';
@@ -557,6 +624,22 @@ const schemas = {
   CrispDmPreparationStep: entity(dm.preparationStepSchema, { projectId: uuid }),
   CrispDmModel: entity(dm.modelSchema, { projectId: uuid }),
   CrispDmModelMetric: entity(dm.modelMetricSchema, { modelId: uuid }),
+  SystemSpec: toSchema(sv.specUpdateSchema, 'output'),
+  SystemViewOverview: object({
+    counts,
+    gaps: object({
+      functionalWithoutUseCase: arrayOf({ type: 'string' }),
+      useCasesWithoutMainFlow: { type: 'integer' },
+      storiesWithoutScenario: arrayOf({ type: 'string' }),
+    }),
+  }),
+  Stakeholder: entity(sv.stakeholderSchema, { projectId: uuid }),
+  GlossaryTerm: entity(sv.glossarySchema, { projectId: uuid }),
+  UseCase: entity(sv.useCaseSchema, { projectId: uuid }),
+  UseCaseFlow: entity(sv.flowSchema, { useCaseId: uuid }),
+  UseCaseRelation: entity(sv.relationSchema, { projectId: uuid }),
+  UseCaseDetail: { allOf: [ref('UseCase'), object({ flows: arrayOf(ref('UseCaseFlow')), relations: arrayOf(ref('UseCaseRelation')) })] },
+  BddScenario: entity(sv.scenarioSchema, { projectId: uuid }),
   KanbanColumn: entity(kb.columnSchema, { projectId: uuid, position: { type: 'integer' } }),
   KanbanCard: entity(kb.cardSchema, { projectId: uuid, position: { type: 'integer' } }),
   KanbanBoard: object({
@@ -609,6 +692,7 @@ export function buildOpenApi() {
       { name: T_PROJ, description: 'Projetos `software` ou `data_analysis` e catálogo de seções' },
       { name: T_SA, description: 'Requisitos, histórias de usuário e diagramas. Projetos `software`, todos os planos.' },
       { name: T_DM, description: 'Metodologia CRISP-DM. Projetos `data_analysis`, planos Standard e Master.' },
+      { name: T_SV, description: 'Especificação de requisitos (UML: casos de uso, stakeholders, glossário) e BDD (Gherkin). Projetos `software`, planos Standard e Master.' },
       { name: T_KB, description: 'Quadro de tarefas com colunas e cartões. Qualquer tipo de projeto, todos os planos.' },
     ],
     paths,

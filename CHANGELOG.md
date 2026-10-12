@@ -1,5 +1,21 @@
 # Changelog
 
+## 3.7.0 — 2026-10-13
+
+### Adicionado
+- Seção **Visão de Sistema** (`/projects/:projectId/system-view`), extensão da Análise de Sistemas
+  para projetos `software` nos planos Standard e Master. Base: a *Planilha de Análise* do projeto,
+  a ISO/IEC/IEEE 29148 e o modelo de documentação de casos de uso de Guedes (*UML 2*, tab. 3.1).
+  - Definições do software, stakeholders e glossário de domínio.
+  - Casos de uso com ator principal e secundários, resumo, pré e pós-condições, restrições,
+    generalização (sem ciclos), rastreabilidade com requisitos, cenários principal (um só),
+    alternativos e de exceção (passos ator/sistema) e relações `«include»`/`«extend»`.
+  - BDD: cenários Dado/Quando/Então, gerados a partir dos fluxos do caso de uso ou cadastrados à
+    mão, e exportação Gherkin (`.feature` por história) em português, inglês ou espanhol.
+  - Visão geral com lacunas de rastreabilidade e documento de especificação completo.
+- Tipo de requisito `domain` (requisitos de domínio, RD) na Análise de Sistemas.
+- Migration 000012; rotas documentadas no OpenAPI.
+
 ## 3.6.0 — 2026-10-12
 
 ### Adicionado

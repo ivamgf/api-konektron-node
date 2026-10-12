@@ -116,6 +116,27 @@ automaticamente com o projeto.
 | CRUD | /models | Modeling |
 | CRUD | /models/:modelId/metrics | Evaluation |
 
+### Visão de Sistema — `/projects/:projectId/system-view`
+
+Extensão da Análise de Sistemas: projetos `software`, planos Standard e Master (migration 000012).
+Requisitos, histórias e diagramas continuam na Análise de Sistemas (que ganhou o tipo de
+requisito `domain`); aqui ficam a especificação no modelo da *Planilha de Análise* / ISO 29148,
+os casos de uso no modelo de Guedes (*UML 2*, tab. 3.1) e os cenários BDD.
+
+| Método | Rota | Observação |
+|---|---|---|
+| GET | / | contagens e lacunas de rastreabilidade (RF sem caso de uso, histórias sem cenário) |
+| GET | /report | documento de especificação completo (versão UML) |
+| GET | /features?lang= | arquivos `.feature` (Gherkin) por história, em `pt-BR`, `en` ou `es` |
+| GET · PATCH | /spec | finalidade, perspectiva do produto, usuários, restrições, suposições... |
+| CRUD | /stakeholders · /glossary | stakeholders (P1...) e conceitos do domínio (C1...) |
+| CRUD | /use-cases | ator principal/secundários, pré/pós-condições, restrições, `requirementIds`, generalização (`generalUseCaseId`, sem ciclos) |
+| GET | /use-cases/:id | caso de uso com cenários e relações |
+| CRUD | /use-cases/:useCaseId/flows | cenários `main` (um só), `alternative`, `exception` com passos `{ actor, system }` |
+| CRUD | /relations | `include` / `extend` (ponto de extensão e condição) |
+| POST | /use-cases/:id/scenarios?lang= | gera cenários BDD dos fluxos (Dado = pré-condições, Quando = ator, Então = sistema) |
+| CRUD | /scenarios | cenários BDD (`given`/`when`/`then` um passo por linha; `examples` vira Esquema do Cenário) |
+
 ### Kanban — `/projects/:projectId/kanban`
 
 Disponível em todos os planos, para qualquer tipo de projeto (migration 000010).

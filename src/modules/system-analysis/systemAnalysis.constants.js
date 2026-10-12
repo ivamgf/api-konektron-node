@@ -1,5 +1,5 @@
 // Análise de Sistemas — artefatos de engenharia de requisitos de um projeto `software`
-export const REQUIREMENT_TYPES = ['functional', 'non_functional', 'business_rule'];
+export const REQUIREMENT_TYPES = ['functional', 'non_functional', 'domain', 'business_rule'];
 export const REQUIREMENT_STATUS = ['proposed', 'approved', 'implemented', 'rejected'];
 export const PRIORITIES = ['must', 'should', 'could', 'wont']; // MoSCoW
 
