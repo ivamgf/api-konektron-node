@@ -6,7 +6,9 @@ import { audit } from '#services/auditLog.js';
 import crispdmRoutes from '#modules/crisp-dm/crispdm.routes.js';
 import systemAnalysisRoutes from '#modules/system-analysis/systemAnalysis.routes.js';
 import kanbanRoutes from '#modules/kanban/kanban.routes.js';
-import systemViewRoutes from '#modules/system-view/systemView.routes.js';
+import ontologiesRoutes from '#modules/ontologies/ontologies.routes.js';
+import bpmRoutes from '#modules/bpm/bpm.routes.js';
+import commonkadsRoutes from '#modules/commonkads/commonkads.routes.js';
 import { createProjectSchema, listQuery, updateProjectSchema } from './projects.schemas.js';
 import { projectsService as s } from './projects.service.js';
 
@@ -37,9 +39,11 @@ router.delete('/:projectId', loadProject(), async (req, res) => {
 
 // Módulos por tipo de projeto
 router.use('/:projectId/system-analysis', systemAnalysisRoutes);
-router.use('/:projectId/system-view', systemViewRoutes);
 router.use('/:projectId/crisp-dm', crispdmRoutes);
 // Módulos para qualquer tipo de projeto
+router.use('/:projectId/ontologies', ontologiesRoutes);
+router.use('/:projectId/bpm', bpmRoutes);
+router.use('/:projectId/commonkads', commonkadsRoutes);
 router.use('/:projectId/kanban', kanbanRoutes);
 
 export default router;

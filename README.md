@@ -1,4 +1,4 @@
-# KonekTron API v3.2
+# KonekTron API v4
 
 API do KonekTron — Engenharia de Software e Análise de Dados.
 Node.js 24 · Express 5 · PostgreSQL (Knex) · Zod 4 · JWT.
@@ -13,7 +13,7 @@ src/
 ├── database/      connection.js, helpers.js, migrations/, seeds/
 ├── middlewares/   authenticate, authorize, validate, loadProject, errorHandler
 ├── services/      mailer (SMTP), auditLog
-├── shared/        crudRouter (CRUD genérico com escopo), schemas comuns
+├── shared/        crudRouter (CRUD genérico com escopo), files (upload/download), projectRefs, schemas comuns
 ├── utils/         AppError, case (snake/camel), logger, tokens
 └── modules/
     ├── auth/         RF1, RF2, RF4, RF7
@@ -24,6 +24,10 @@ src/
     ├── projects/     projetos `software` ou `data_analysis`
     ├── system-analysis/  requisitos, histórias de usuário e diagramas (projetos de software)
     ├── crisp-dm/     metodologia CRISP-DM para projetos de dados
+    ├── ontologies/   catálogo de ontologias com arquivo e leitura automática (qualquer projeto)
+    ├── bpm/          arquitetura de processos, SIPOC e diagramas BPMN (qualquer projeto)
+    ├── commonkads/   planilhas CommonKADS e MAS-CommonKADS (qualquer projeto)
+    ├── kanban/       quadro de tarefas (qualquer projeto)
     └── engineering/  RF6 — catálogo de seções (as não implementadas respondem 501)
 ```
 
@@ -116,27 +120,60 @@ automaticamente com o projeto.
 | CRUD | /models | Modeling |
 | CRUD | /models/:modelId/metrics | Evaluation |
 
-### Visão de Sistema — `/projects/:projectId/system-view`
+### Ontologias — `/projects/:projectId/ontologies`
 
-Extensão da Análise de Sistemas: projetos `software`, planos Standard e Master (migration 000012).
-Requisitos, histórias e diagramas continuam na Análise de Sistemas (que ganhou o tipo de
-requisito `domain`); aqui ficam a especificação no modelo da *Planilha de Análise* / ISO 29148,
-os casos de uso no modelo de Guedes (*UML 2*, tab. 3.1) e os cenários BDD.
+Plano Master, qualquer tipo de projeto (migration 000013). A raiz é a própria coleção.
 
 | Método | Rota | Observação |
 |---|---|---|
-| GET | / | contagens e lacunas de rastreabilidade (RF sem caso de uso, histórias sem cenário) |
-| GET | /report | documento de especificação completo (versão UML) |
-| POST | /import | traz dados de um projeto da Análise de Sistemas (o próprio ou outro) e gera rascunhos; `dryRun` = prévia |
-| GET | /features?lang= | arquivos `.feature` (Gherkin) por história, em `pt-BR`, `en` ou `es` |
-| GET · PATCH | /spec | finalidade, perspectiva do produto, usuários, restrições, suposições... |
-| CRUD | /stakeholders · /glossary | stakeholders (P1...) e conceitos do domínio (C1...) |
-| CRUD | /use-cases | ator principal/secundários, pré/pós-condições, restrições, `requirementIds`, generalização (`generalUseCaseId`, sem ciclos) |
-| GET | /use-cases/:id | caso de uso com cenários e relações |
-| CRUD | /use-cases/:useCaseId/flows | cenários `main` (um só), `alternative`, `exception` com passos `{ actor, system }` |
-| CRUD | /relations | `include` / `extend` (ponto de extensão e condição) |
-| POST | /use-cases/:id/scenarios?lang= | gera cenários BDD dos fluxos (Dado = pré-condições, Quando = ator, Então = sistema) |
-| CRUD | /scenarios | cenários BDD (`given`/`when`/`then` um passo por linha; `examples` vira Esquema do Cenário) |
+| GET | /summary | totais, publicadas, com arquivo, soma das contagens, uso de formatos/vocabulários/princípios |
+| CRUD | / | título, descrição, formato, IRI, versão, situação, contagens (`classCount`, `relationshipCount`, `propertyCount`, `objectCount`), `vocabularies`, `principles`, `publicationUrl`, questões de competência...; filtros `?format=&status=` |
+| PUT · GET · DELETE | /:id/file | arquivo da ontologia (`.owl`, `.rdf`, `.ttl`, `.jsonld`, `.obo`...) |
+
+Ao receber o arquivo, a API identifica formato, IRI, versão e vocabulários (pelos namespaces) e
+estima as contagens: relacionamentos = propriedades de objeto, propriedades = de dados, objetos =
+indivíduos. Só preenche o que está vazio; a leitura completa volta em `analysis`.
+
+### BPM — `/projects/:projectId/bpm`
+
+Planos Standard e Master, qualquer tipo de projeto (migration 000014).
+
+| Método | Rota | Observação |
+|---|---|---|
+| GET | / | processos para a árvore (por `parentId`), contagens e se o SIPOC de cada um está completo |
+| CRUD | /processes | `code`, `level` (macroprocesso → atividade), `parentId` (sem ciclos), dono, SIPOC (`suppliers`, `inputs`, `steps`, `outputs`, `customers`), indicadores, problemas e melhorias |
+| CRUD | /diagrams | `processId`, `state` (`as_is`/`to_be`), notação, versão, ferramenta, `url`; filtros `?processId=&state=` |
+| PUT · GET · DELETE | /diagrams/:id/file | `.bpmn`/`.xml` (lido: tarefas, eventos, gateways, pools, raias → `metrics`), imagem ou PDF |
+
+### CommonKADS — `/projects/:projectId/commonkads`
+
+Plano Master, qualquer tipo de projeto (migration 000015). As 17 planilhas do CommonKADS e da
+extensão MAS-CommonKADS: as de texto livre guardam o conteúdo na própria planilha; as em linhas
+são cadastros (OM-3/TM-1 → tarefas, OM-4/TM-2 → conhecimento, AM-1/MAS → agentes, CM-1/CM-2 →
+transações). Os vínculos são guardados uma vez só e o relatório os resolve nos dois sentidos.
+
+| Método | Rota | Observação |
+|---|---|---|
+| GET | / | progresso, situação das planilhas, contagens e lacunas (tarefas sem agente, conhecimento sem uso...) |
+| GET | /report | documento completo |
+| GET · PATCH | /worksheets[/:key] | `om-1` … `dm-4`; `status`, `notes` e `content` (merge) |
+| CRUD | /tasks | OM-3 + TM-1; `agentIds`, `knowledgeIds`, intensiva em conhecimento, significância 1–5 |
+| CRUD | /knowledge | OM-4 + TM-2; forma/lugar/tempo/qualidade certos e `characterization` (natureza, forma, disponibilidade, gargalos) |
+| CRUD | /agents | AM-1 + MAS; `kind`, `knowledgeIds`, `communicatesWithIds`, condições de ativação/término/sucesso/falha, técnica de IA |
+| CRUD | /transactions | CM-1 + CM-2; tarefas e agentes de origem/destino, `informationItems`, `messages` (tipos de comunicação) |
+
+### Arquivos
+
+Upload com o arquivo bruto no corpo (`Content-Type: application/octet-stream`, até 20 MB) e o
+nome em `X-File-Name` (codificado com `encodeURIComponent`). O conteúdo fica no Postgres, numa
+tabela própria apagada em cascata com o registro; as listagens trazem só os metadados (`fileName`,
+`fileMime`, `fileSize`, `fileSha256`, `fileUploadedAt`).
+
+```bash
+curl -X PUT $API/projects/$ID/ontologies/$ONTO/file \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/octet-stream' \
+  -H 'X-File-Name: agenda.owl' --data-binary @agenda.owl
+```
 
 ### Kanban — `/projects/:projectId/kanban`
 

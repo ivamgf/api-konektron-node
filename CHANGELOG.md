@@ -1,5 +1,32 @@
 # Changelog
 
+## 4.0.0 — 2026-10-14
+
+### Removido (incompatível)
+- Seção **Visão de Sistema** (`/projects/:projectId/system-view` e a seção `system-view` do catálogo e dos
+  planos): a Análise de Sistemas já cobre requisitos, histórias e diagramas. A migration 000012 continua no
+  histórico e as tabelas dela (`system_specs`, `stakeholders`, `glossary_terms`, `use_cases`, `use_case_flows`,
+  `use_case_relations`, `bdd_scenarios`) não são apagadas: nenhum dado é perdido no deploy.
+
+### Adicionado
+- Seção **Ontologias** (`/projects/:projectId/ontologies`, plano Master, qualquer tipo de projeto): catálogo com
+  título, descrição, formato, IRI, versão, situação, contagens de classes, relacionamentos, propriedades e
+  objetos, vocabulários (RDF, RDFS, OWL, Schema.org, RDFa, SKOS, Dublin Core, FOAF, PROV, DCAT, SHACL...),
+  princípios (FAIR, CARE, 5 estrelas, TRUST), URL de publicação e de repositório, questões de competência e
+  upload do arquivo (OWL, RDF/XML, OWL/XML, Turtle, N-Triples, N3, JSON-LD, OBO, RDFa...). O arquivo é lido na
+  hora: formato, IRI, versão, vocabulários e contagens estimadas preenchem os campos vazios.
+- Seção **BPM** (`/projects/:projectId/bpm`, planos Standard e Master): arquitetura de processos
+  (macroprocesso → atividade, sem ciclos) com SIPOC, indicadores, problemas e melhorias, e diagramas AS IS / TO BE
+  com upload de BPMN 2.0 (contagem de tarefas, eventos, gateways, pools e raias), imagem ou PDF.
+- Seção **CommonKADS** (`/projects/:projectId/commonkads`, plano Master): as 17 planilhas (OM-1 a OM-5, TM-1,
+  TM-2, AM-1, MAS, OTA-1, KM-1, CM-1, CM-2, DM-1 a DM-4) com situação, conteúdo com merge, cadastros de tarefas,
+  conhecimento (com natureza, forma, disponibilidade e gargalos), agentes e transações, visão geral com lacunas
+  entre os modelos e documento completo.
+- Upload/download de arquivos (`shared/files.js`): corpo binário até 20 MB, nome em `X-File-Name`, conteúdo em
+  tabela própria apagada em cascata. Erros 413 (grande demais) e 415 (não enviado como octet-stream).
+- `crudRouter` aceita `afterDelete`; os vínculos jsonb do CommonKADS são limpos quando o registro citado é excluído.
+- Migrations 000013 a 000015; rotas documentadas no OpenAPI (inclusive o corpo binário).
+
 ## 3.8.0 — 2026-10-13
 
 ### Adicionado

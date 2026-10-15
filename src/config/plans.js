@@ -4,7 +4,6 @@ export const ROLES = Object.freeze({ CLIENT: 'client', ADMIN: 'admin', PROVIDER:
 
 export const SECTIONS = Object.freeze({
   SYSTEM_ANALYSIS: 'system-analysis',
-  SYSTEM_VIEW: 'system-view',
   ONTOLOGIES: 'ontologies',
   BPM: 'bpm',
   FUNCTION_POINT: 'function-point',
@@ -15,20 +14,19 @@ export const SECTIONS = Object.freeze({
 
 // Seções já implementadas na API (as demais respondem 501)
 export const IMPLEMENTED_SECTIONS = Object.freeze([
-  SECTIONS.SYSTEM_ANALYSIS, SECTIONS.SYSTEM_VIEW, SECTIONS.CRISP_DM, SECTIONS.KANBAN,
+  SECTIONS.SYSTEM_ANALYSIS, SECTIONS.ONTOLOGIES, SECTIONS.BPM, SECTIONS.COMMONKADS, SECTIONS.CRISP_DM, SECTIONS.KANBAN,
 ]);
 
-// Tipo de projeto exigido por cada seção implementada; as ausentes (Kanban) servem a qualquer tipo
+// Tipo de projeto exigido por seção; as ausentes (Ontologias, BPM, CommonKADS, Kanban) servem a qualquer tipo
 export const SECTION_PROJECT_TYPE = Object.freeze({
   [SECTIONS.SYSTEM_ANALYSIS]: 'software',
-  [SECTIONS.SYSTEM_VIEW]: 'software', // extensão da Análise de Sistemas
   [SECTIONS.CRISP_DM]: 'data_analysis',
 });
 
 // Kanban faz parte de todos os planos
 export const PLAN_SECTIONS = Object.freeze({
   [PLANS.FREE]: [SECTIONS.SYSTEM_ANALYSIS, SECTIONS.KANBAN],
-  [PLANS.STANDARD]: [SECTIONS.SYSTEM_ANALYSIS, SECTIONS.SYSTEM_VIEW, SECTIONS.BPM, SECTIONS.CRISP_DM, SECTIONS.KANBAN],
+  [PLANS.STANDARD]: [SECTIONS.SYSTEM_ANALYSIS, SECTIONS.BPM, SECTIONS.CRISP_DM, SECTIONS.KANBAN],
   [PLANS.MASTER]: Object.values(SECTIONS),
 });
 
