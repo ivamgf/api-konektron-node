@@ -204,7 +204,19 @@ Planos Standard e Master, qualquer tipo de projeto (migration 000018), segundo o
 | CRUD | /sprints | `number`, meta, datas, `status`, incremento (texto, versão, URL) |
 | GET | /sprints/:id/detail | sprint com itens, tasks, eventos e burndown |
 | CRUD | /tasks | `sprintId`, `itemId`, `assigneeId`, `status` (`todo`, `in_progress`, `done`), horas estimadas e restantes |
+| POST | /sprints/:id/publish-kanban | publica no Kanban as tasks da sprint que ainda não estão lá (ver abaixo) |
 | CRUD | /events | `type` (`planning`, `daily`, `review`, `retrospective`, `refinement`), data, facilitador, participantes, `updates` da daily, campos da review e da retrospectiva |
+
+**Scrum ↔ Kanban** (migration 000019). Publicar a sprint cria um cartão para cada task (itens do Sprint
+Backlog sem tasks ganham uma task com o próprio título), na coluna da situação da task. As colunas do
+Kanban têm `taskStatus` (`todo`, `in_progress`, `done`); um quadro vazio ganha as três colunas e um quadro
+sem nenhuma marcação é marcado pela ordem (1ª, 2ª e última). Depois disso:
+
+- mover o cartão para uma coluna marcada muda a situação da task (colunas sem marcação não mudam nada);
+- mudar a task no Scrum leva o cartão para a coluna da nova situação; título, descrição e responsável acompanham;
+- editar título ou descrição do cartão edita a task; excluir a task exclui o cartão (excluir o cartão mantém a task);
+- o item do backlog acompanha as suas tasks: todas concluídas → item concluído; alguma reaberta → em andamento;
+- `GET /sprints/:id/detail` traz `delivered` (itens e tasks concluídos e os pontos entregues): o incremento.
 
 ### Contato — `/contact` e `/admin/contact-messages`
 
@@ -225,7 +237,8 @@ Disponível em todos os planos, para qualquer tipo de projeto (migration 000010)
 | POST | /cards/:id/move | `{ columnId, position }`; reordena os vizinhos e devolve o quadro |
 
 O PATCH de cartão não muda coluna nem posição: use `/move`. Excluir uma coluna exclui
-seus cartões.
+seus cartões. Colunas aceitam `taskStatus` e cartões publicados pelo Scrum trazem `scrumTaskId`,
+`taskStatus`, `sprintId`, `sprintNumber` e `itemCode` (ver Scrum ↔ Kanban acima).
 
 `content` de cada fase guarda as saídas das tarefas do guia CRISP-DM 1.0
 (ex.: `background`, `dataQualityReport`, `testDesign`, `decision`). O PATCH faz *merge*:

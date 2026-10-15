@@ -7,6 +7,7 @@ import { crudRouter, jsonbFields } from '#shared/crudRouter.js';
 import { uniqueIds } from '#shared/projectRefs.js';
 import { idParams } from '#shared/schemas.js';
 import * as s from './scrum.schemas.js';
+import { rollupItem, scrumKanban } from './scrum.kanban.js';
 import { scrumService as svc, stampDone } from './scrum.service.js';
 
 // Montado em /projects/:projectId/scrum (authenticate já aplicado pelo módulo projects).
@@ -61,6 +62,11 @@ router.use(
 router.get('/sprints/:id/detail', validate({ params: idParams }), async (req, res) =>
   res.json(await svc.sprintDetail(req.project.id, req.validated.params.id)),
 );
+// Publica no Kanban as tasks da sprint que ainda não estão no quadro
+router.post('/sprints/:id/publish-kanban', validate({ params: idParams, body: s.publishKanbanSchema }), async (req, res) => {
+  const result = await scrumKanban.publishSprint(req.project.id, req.validated.params.id, req.validated.body);
+  res.json({ ...result, sprint: await svc.sprintDetail(req.project.id, req.validated.params.id) });
+});
 router.use(
   '/sprints',
   crudRouter({
@@ -83,8 +89,17 @@ router.use(
     orderBy: [{ column: 'position' }, { column: 'createdAt' }],
     beforeWrite: async (trx, req, data, id) => {
       await svc.assertTaskRefs(trx, req.project.id, data);
+      // task publicada no Kanban: o cartão acompanha (título, responsável, coluna da situação)
+      if (id) await scrumKanban.syncTaskToCard(trx, req.project.id, id, data);
       stampDone(data, id);
       if (data.status === 'done') data.remainingHours = 0;
+      // item ligado muda de item: o item antigo também é recalculado
+      if (id && data.itemId !== undefined) req.previousItemId = (await trx('scrum_tasks').where({ id }).first('itemId'))?.itemId;
+    },
+    // o item do backlog acompanha as suas tasks (todas concluídas → item concluído)
+    afterWrite: async (trx, req, task) => {
+      await rollupItem(trx, task.itemId);
+      if (req.previousItemId && req.previousItemId !== task.itemId) await rollupItem(trx, req.previousItemId);
     },
   }),
 );

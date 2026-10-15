@@ -649,7 +649,22 @@ crud(`${SC}/sprints`, {
   example: { number: 1, goal: 'Cliente agenda sozinho', startDate: '2026-11-02', endDate: '2026-11-13', status: 'active' },
 });
 add('get', `${SC}/sprints/{id}/detail`, {
-  tag: T_SC, summary: 'Sprint com Sprint Backlog, tasks, eventos e burndown', errors: anySection, response: { type: 'object' },
+  tag: T_SC, summary: 'Sprint com Sprint Backlog, tasks, eventos, burndown e incremento entregue',
+  description:
+    'Cada task traz `kanbanCardId` quando está publicada no Kanban. `delivered` lista os itens e tasks concluídos ' +
+    '(ordem de conclusão) e os pontos entregues.',
+  errors: anySection, response: { type: 'object' },
+});
+add('post', `${SC}/sprints/{id}/publish-kanban`, {
+  tag: T_SC, summary: 'Publicar as tasks da sprint no Kanban',
+  description:
+    'Cria um cartão para cada task da sprint que ainda não está no quadro (itens do Sprint Backlog sem tasks ganham ' +
+    'uma task com o próprio título). Cada cartão entra na coluna da situação da task (`taskStatus` das colunas); ' +
+    'num quadro vazio são criadas as colunas A fazer, Fazendo e Feito (ou os nomes em `columnNames`). Depois disso, ' +
+    'mover o cartão muda a task e mudar a task move o cartão; tasks concluídas aparecem no incremento entregue.',
+  body: sc.publishKanbanSchema, errors: anySection,
+  response: object({ published: { type: 'integer' }, createdTasks: { type: 'integer' }, sprint: { type: 'object' } }),
+  example: { columnNames: { todo: 'A fazer', in_progress: 'Fazendo', done: 'Feito' } },
 });
 crud(`${SC}/tasks`, {
   tag: T_SC, name: 'ScrumTask', label: 'task', plural: 'tasks da sprint', schema: sc.taskSchema, filters: sc.taskFilters,
@@ -897,7 +912,12 @@ const schemas = {
     averageVelocity: nullable({ type: 'number' }), currentSprint: nullable({ type: 'object' }),
   }),
   KanbanColumn: entity(kb.columnSchema, { projectId: uuid, position: { type: 'integer' } }),
-  KanbanCard: entity(kb.cardSchema, { projectId: uuid, position: { type: 'integer' } }),
+  KanbanCard: entity(kb.cardSchema, {
+    projectId: uuid, position: { type: 'integer' },
+    // cartões publicados pelo Scrum
+    scrumTaskId: nullable(uuid), taskStatus: nullable({ type: 'string' }), sprintId: nullable(uuid),
+    sprintNumber: nullable({ type: 'integer' }), itemCode: nullable({ type: 'string' }),
+  }),
   KanbanBoard: object({
     columns: arrayOf({ allOf: [ref('KanbanColumn'), object({ cards: arrayOf(ref('KanbanCard')) })] }),
   }),

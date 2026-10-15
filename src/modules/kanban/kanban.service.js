@@ -1,5 +1,6 @@
 import { db } from '#database/connection.js';
 import { insertAt, nextPosition, renumber } from '#shared/ordering.js';
+import { scrumKanban } from '#modules/scrum/scrum.kanban.js';
 import { AppError } from '#utils/AppError.js';
 
 // Trava as colunas do projeto: movimentos simultâneos no mesmo quadro ficam em fila
@@ -9,7 +10,14 @@ export const kanbanService = {
   async board(projectId) {
     const [columns, cards] = await Promise.all([
       db('kanban_columns').where({ projectId }).orderBy([{ column: 'position' }, { column: 'createdAt' }]),
-      db('kanban_cards').where({ projectId }).orderBy([{ column: 'position' }, { column: 'createdAt' }]),
+      // cartões de tasks do Scrum trazem a sprint e o item de origem
+      db('kanban_cards as c')
+        .leftJoin('scrum_tasks as t', 't.id', 'c.scrum_task_id')
+        .leftJoin('scrum_sprints as s', 's.id', 't.sprint_id')
+        .leftJoin('scrum_items as i', 'i.id', 't.item_id')
+        .where('c.project_id', projectId)
+        .orderBy([{ column: 'c.position' }, { column: 'c.created_at' }])
+        .select('c.*', 't.status as task_status', 't.sprint_id', 's.number as sprint_number', 'i.code as item_code'),
     ]);
     const byColumn = Object.groupBy(cards, (c) => c.columnId);
     return { columns: columns.map((c) => ({ ...c, cards: byColumn[c.id] ?? [] })) };
@@ -48,6 +56,8 @@ export const kanbanService = {
       if (card.columnId !== columnId) {
         const source = await columnCards(card.columnId);
         await renumber(trx, 'kanban_cards', source, source.map((c) => c.id));
+        // cartão de uma task do Scrum: a task assume a situação da coluna
+        await scrumKanban.syncCardMoveToTask(trx, cardId, columnId);
       }
     });
     return this.board(projectId);

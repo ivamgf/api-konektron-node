@@ -82,16 +82,33 @@ export const scrumService = {
     return db('scrum_items').where({ projectId }).orderBy(['position', 'createdAt']);
   },
 
-  // Sprint com o seu backlog, tasks e eventos
+  // Sprint com o seu backlog, tasks (e o cartão no Kanban, se publicada), eventos e o incremento entregue
   async sprintDetail(projectId, sprintId) {
     const sprint = await db('scrum_sprints').where({ id: sprintId, projectId }).first();
     if (!sprint) throw AppError.notFound('Sprint');
     const [items, tasks, events] = await Promise.all([
       db('scrum_items').where({ sprintId }).orderBy(['position', 'createdAt']),
-      db('scrum_tasks').where({ sprintId }).orderBy(['position', 'createdAt']),
+      db('scrum_tasks as t')
+        .leftJoin('kanban_cards as c', 'c.scrum_task_id', 't.id')
+        .where('t.sprint_id', sprintId)
+        .orderBy(['t.position', 't.created_at'])
+        .select('t.*', 'c.id as kanban_card_id'),
       db('scrum_events').where({ sprintId }).orderBy([{ column: 'date' }, { column: 'createdAt' }]),
     ]);
-    return { ...sprint, items, tasks, events, burndown: this.burndown(sprint, items) };
+    return { ...sprint, items, tasks, events, burndown: this.burndown(sprint, items), delivered: this.delivered(items, tasks) };
+  },
+
+  // Incremento entregue: o que foi concluído na sprint, na ordem de conclusão
+  delivered(items, tasks) {
+    const time = (d) => (d ? new Date(d).getTime() : Infinity);
+    const byDone = (a, b) => time(a.doneAt) - time(b.doneAt);
+    const pick = (rows, fields) => rows.filter((r) => r.status === 'done').sort(byDone).map((r) => Object.fromEntries(fields.map((f) => [f, r[f]])));
+    const doneItems = pick(items, ['id', 'code', 'title', 'storyPoints', 'doneAt']);
+    return {
+      items: doneItems,
+      tasks: pick(tasks, ['id', 'title', 'itemId', 'doneAt']),
+      points: sum(doneItems, 'storyPoints'),
+    };
   },
 
   // Pontos restantes por dia da sprint (ideal × real), a partir da data de conclusão dos itens

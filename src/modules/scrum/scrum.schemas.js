@@ -106,6 +106,15 @@ export const eventSchema = z.object({
 
 export const moveSchema = z.object({ position: z.number().int().min(0) });
 
+// Nomes das colunas criadas num quadro vazio (no idioma de quem publica)
+const columnName = z.string().trim().min(1).max(60).optional();
+export const publishKanbanSchema = z.object({
+  columnNames: z
+    .object({ todo: columnName, in_progress: columnName, done: columnName })
+    .optional()
+    .describe('Só usados se o Kanban ainda não tiver colunas; padrão: A fazer, Fazendo, Feito'),
+});
+
 export const itemFilters = z.object({
   status: z.enum(ITEM_STATUS).optional(),
   type: z.enum(ITEM_TYPES).optional(),

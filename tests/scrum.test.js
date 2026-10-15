@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { canAccessSection, IMPLEMENTED_SECTIONS, SECTIONS } from '#config/plans.js';
-import { eventSchema, itemSchema, memberSchema, sprintSchema, taskSchema } from '#modules/scrum/scrum.schemas.js';
+import { eventSchema, itemSchema, memberSchema, publishKanbanSchema, sprintSchema, taskSchema } from '#modules/scrum/scrum.schemas.js';
 import { scrumService } from '#modules/scrum/scrum.service.js';
 import { buildOpenApi } from '../src/docs/openapi.js';
 
@@ -62,4 +62,43 @@ test('OpenAPI documenta o Scrum', () => {
   for (const p of ['', '/settings', '/members', '/items', '/items/{id}/move', '/sprints', '/sprints/{id}/detail', '/tasks', '/events']) {
     assert.ok(paths[`${base}${p}`], p || '/');
   }
+});
+
+test('Scrum → Kanban: coluna de cada situação da task', async () => {
+  const { autoMap, columnFor } = await import('#modules/scrum/scrum.kanban.js');
+  const cols = [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }];
+  // sem marcação: 1ª coluna recebe "a fazer" e "em andamento", a última recebe "feito"
+  assert.equal(columnFor(cols, 'todo').id, 'a');
+  assert.equal(columnFor(cols, 'in_progress').id, 'a');
+  assert.equal(columnFor(cols, 'done').id, 'd');
+  assert.equal(columnFor([], 'todo'), null);
+  // marcação manda
+  const marked = [{ id: 'a', taskStatus: 'todo' }, { id: 'b', taskStatus: 'in_progress' }, { id: 'c' }, { id: 'd', taskStatus: 'done' }];
+  assert.equal(columnFor(marked, 'in_progress').id, 'b');
+  // marcação automática pela ordem, só em quadro sem nenhuma marcação
+  assert.deepEqual(autoMap(cols).map(([c, s]) => `${c.id}:${s}`).sort(), ['a:todo', 'b:in_progress', 'd:done']);
+  assert.deepEqual(autoMap(cols.slice(0, 2)).map(([c, s]) => `${c.id}:${s}`).sort(), ['a:todo', 'b:done']);
+  assert.deepEqual(autoMap(cols.slice(0, 1)).map(([c, s]) => `${c.id}:${s}`), ['a:todo']);
+  assert.deepEqual(autoMap(marked), []);
+});
+
+test('incremento entregue: itens e tasks concluídos, na ordem de conclusão', () => {
+  const items = [
+    { id: '1', code: 'PB-1', title: 'A', storyPoints: 5, status: 'done', doneAt: new Date('2026-10-12T10:00:00Z') },
+    { id: '2', code: 'PB-2', title: 'B', storyPoints: 3, status: 'done', doneAt: new Date('2026-10-10T10:00:00Z') },
+    { id: '3', code: 'PB-3', title: 'C', storyPoints: 8, status: 'in_progress', doneAt: null },
+  ];
+  const tasks = [{ id: 't', title: 'T', itemId: '3', status: 'done', doneAt: new Date('2026-10-11T00:00:00Z') }, { id: 'u', status: 'todo' }];
+  const d = scrumService.delivered(items, tasks);
+  assert.deepEqual(d.items.map((i) => i.code), ['PB-2', 'PB-1']);
+  assert.equal(d.points, 8);
+  assert.deepEqual(d.tasks.map((x) => x.id), ['t']);
+});
+
+test('publicar no Kanban: nomes de coluna opcionais e documentado no OpenAPI', () => {
+  assert.equal(publishKanbanSchema.safeParse({}).success, true);
+  assert.equal(publishKanbanSchema.safeParse({ columnNames: { todo: 'To do', done: 'Done' } }).success, true);
+  assert.equal(publishKanbanSchema.safeParse({ columnNames: { todo: '' } }).success, false);
+  const doc = buildOpenApi();
+  assert.ok(doc.paths['/projects/{projectId}/scrum/sprints/{id}/publish-kanban']?.post);
 });

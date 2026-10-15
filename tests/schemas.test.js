@@ -33,3 +33,15 @@ test('CRISP-DM: técnica de modelo validada', () => {
   assert.equal(modelSchema.safeParse({ name: 'rf', technique: 'classification' }).success, true);
   assert.equal(modelSchema.safeParse({ name: 'rf', technique: 'magia' }).success, false);
 });
+
+test('banco desatualizado (tabela ou coluna inexistente) responde 503 pedindo a migration', async () => {
+  const { errorHandler } = await import('#middlewares/errorHandler.js');
+  for (const code of ['42P01', '42703']) {
+    let status;
+    let body;
+    const res = { status: (s) => ((status = s), res), json: (b) => (body = b) };
+    errorHandler(Object.assign(new Error('x'), { code }), { log: { error() {} } }, res, () => {});
+    assert.equal(status, 503, code);
+    assert.match(body.error, /npm run migrate/);
+  }
+});

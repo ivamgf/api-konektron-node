@@ -5,8 +5,9 @@ const PG_ERRORS = {
   23505: [409, 'Registro já existe'],
   23503: [409, 'Registro relacionado não existe ou está em uso'],
   '22P02': [400, 'Formato de dado inválido'],
-  // tabela inexistente: o código é mais novo que o banco
+  // tabela ou coluna inexistente: o código é mais novo que o banco
   '42P01': [503, 'Banco de dados desatualizado: rode "npm run migrate" na API'],
+  42703: [503, 'Banco de dados desatualizado: rode "npm run migrate" na API'],
 };
 
 export function notFound(req, _res, next) {

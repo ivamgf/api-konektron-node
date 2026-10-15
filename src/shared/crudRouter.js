@@ -18,6 +18,7 @@ import { idParams } from '#shared/schemas.js';
  * @param {object}  [o.filters]       schema zod da query do GET / (igualdade por coluna)
  * @param {Function}[o.serialize]     transforma o corpo antes de gravar (ex.: jsonb)
  * @param {Function}[o.beforeWrite]   async (trx, req, data) => void — validações/efeitos extras
+ * @param {Function}[o.afterWrite]    async (trx, req, row) => void — efeitos que dependem do registro gravado
  * @param {Function}[o.afterDelete]   async (trx, req, id) => void — limpa referências ao registro excluído
  * @param {string}  [o.label]         nome para mensagens de erro
  */
@@ -30,6 +31,7 @@ export function crudRouter({
   filters = z.object({}),
   serialize = (d) => d,
   beforeWrite,
+  afterWrite,
   afterDelete,
   label = 'Registro',
 }) {
@@ -46,6 +48,7 @@ export function crudRouter({
       const data = serialize(req.validated.body);
       await beforeWrite?.(trx, req, data);
       const [created] = await trx(table).insert({ ...data, ...scope(req) }).returning('*');
+      await afterWrite?.(trx, req, created);
       return created;
     });
     res.status(201).json(row);
@@ -66,6 +69,7 @@ export function crudRouter({
         .where({ id: req.validated.params.id })
         .update(data)
         .returning('*');
+      if (updated) await afterWrite?.(trx, req, updated);
       return updated;
     });
     if (!row) throw AppError.notFound(label);

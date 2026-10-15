@@ -3,6 +3,7 @@ import { SECTIONS } from '#config/plans.js';
 import { requireSection } from '#middlewares/authorize.js';
 import { loadProject } from '#middlewares/loadProject.js';
 import { validate } from '#middlewares/validate.js';
+import { scrumKanban } from '#modules/scrum/scrum.kanban.js';
 import { crudRouter } from '#shared/crudRouter.js';
 import { idParams } from '#shared/schemas.js';
 import * as s from './kanban.schemas.js';
@@ -53,9 +54,9 @@ router.use(
     updateSchema: s.cardUpdateSchema,
     filters: s.cardFilters,
     orderBy: [{ column: 'position' }, { column: 'createdAt' }],
-    // novo cartão entra no fim da coluna escolhida
+    // novo cartão entra no fim da coluna escolhida; editar o cartão de uma task do Scrum edita a task
     beforeWrite: async (trx, req, data, id) => {
-      if (id) return;
+      if (id) return scrumKanban.syncCardEditToTask(trx, id, data);
       await svc.assertColumnInProject(trx, req.project.id, data.columnId);
       data.position = await svc.nextPosition(trx, 'kanban_cards', { columnId: data.columnId });
     },

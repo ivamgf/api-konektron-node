@@ -1,5 +1,21 @@
 # Changelog
 
+## 4.2.0 — 2026-10-16
+
+### Adicionado
+- **Scrum ↔ Kanban**: `POST /projects/:projectId/scrum/sprints/:id/publish-kanban` publica no Kanban as tasks
+  da sprint que ainda não estão lá (itens do Sprint Backlog sem tasks ganham uma task). Os cartões trazem
+  responsável, prazo (fim da sprint), sprint e item de origem.
+- Colunas do Kanban com `taskStatus` (`todo`, `in_progress`, `done`): mover o cartão de uma task para uma
+  coluna marcada muda a task; mudar a task no Scrum move o cartão. Quadro vazio ganha as três colunas
+  (nomes no idioma de quem publica); quadro sem marcação é marcado pela ordem.
+- Título e descrição sincronizados entre task e cartão; excluir a task exclui o cartão.
+- O item do backlog acompanha as suas tasks (todas concluídas → item concluído; alguma reaberta → em
+  andamento), o que alimenta o burndown, a velocidade e o incremento.
+- `GET /sprints/:id/detail` traz `delivered` (itens e tasks concluídos, pontos entregues) e o `kanbanCardId`
+  de cada task.
+- `crudRouter` aceita `afterWrite`. Migration 000019, OpenAPI, README e testes.
+
 ## 4.1.0 — 2026-10-15
 
 ### Adicionado
