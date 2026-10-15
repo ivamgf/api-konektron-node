@@ -18,6 +18,7 @@ import { idParams } from '#shared/schemas.js';
  * @param {object}  [o.filters]       schema zod da query do GET / (igualdade por coluna)
  * @param {Function}[o.serialize]     transforma o corpo antes de gravar (ex.: jsonb)
  * @param {Function}[o.beforeWrite]   async (trx, req, data) => void — validações/efeitos extras
+ * @param {Function}[o.afterDelete]   async (trx, req, id) => void — limpa referências ao registro excluído
  * @param {string}  [o.label]         nome para mensagens de erro
  */
 export function crudRouter({
@@ -29,6 +30,7 @@ export function crudRouter({
   filters = z.object({}),
   serialize = (d) => d,
   beforeWrite,
+  afterDelete,
   label = 'Registro',
 }) {
   const router = Router({ mergeParams: true });
@@ -71,7 +73,12 @@ export function crudRouter({
   });
 
   router.delete('/:id', validate({ params: idParams }), async (req, res) => {
-    const n = await scoped(db(table), req).where({ id: req.validated.params.id }).del();
+    const { id } = req.validated.params;
+    const n = await db.transaction(async (trx) => {
+      const deleted = await scoped(trx(table), req).where({ id }).del();
+      if (deleted) await afterDelete?.(trx, req, id);
+      return deleted;
+    });
     if (!n) throw AppError.notFound(label);
     res.status(204).end();
   });

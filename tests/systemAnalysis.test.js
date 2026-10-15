@@ -43,7 +43,12 @@ test('troca de senha: confirmação e senha nova diferente da atual', () => {
   );
 });
 
-test('seções implementadas declaram o tipo de projeto exigido', () => {
+test('seções implementadas: as de metodologia exigem um tipo de projeto, as demais servem a qualquer tipo', () => {
   assert.ok(IMPLEMENTED_SECTIONS.includes(SECTIONS.SYSTEM_ANALYSIS));
-  for (const s of IMPLEMENTED_SECTIONS) assert.ok(SECTION_PROJECT_TYPE[s]);
+  const anyType = [SECTIONS.ONTOLOGIES, SECTIONS.BPM, SECTIONS.COMMONKADS, SECTIONS.KANBAN];
+  for (const s of IMPLEMENTED_SECTIONS) {
+    if (anyType.includes(s)) assert.equal(SECTION_PROJECT_TYPE[s], undefined, s);
+    else assert.ok(SECTION_PROJECT_TYPE[s], s);
+  }
+  assert.equal(SECTIONS.SYSTEM_VIEW, undefined); // Visão de Sistema removida (a Análise de Sistemas cobre)
 });

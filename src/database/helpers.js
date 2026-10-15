@@ -16,3 +16,19 @@ export const addUpdatedAtTrigger = (knex, table) =>
   );
 
 export const uuidPk = (knex, t) => t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+
+// Metadados de um arquivo anexado (o conteúdo fica numa tabela à parte; ver shared/files.js)
+export const fileColumns = (t) => {
+  t.string('file_name', 255);
+  t.string('file_mime', 100);
+  t.bigInteger('file_size');
+  t.string('file_sha256', 64);
+  t.timestamp('file_uploaded_at', { useTz: true });
+};
+
+// Conteúdo do arquivo, uma linha por registro, apagada junto com ele
+export const fileBlobTable = (knex, table, column, references) =>
+  knex.schema.createTable(table, (t) => {
+    t.uuid(column).primary().references(references).onDelete('CASCADE');
+    t.binary('data').notNullable(); // bytea
+  });

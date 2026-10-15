@@ -5,6 +5,8 @@ const PG_ERRORS = {
   23505: [409, 'Registro já existe'],
   23503: [409, 'Registro relacionado não existe ou está em uso'],
   '22P02': [400, 'Formato de dado inválido'],
+  // tabela inexistente: o código é mais novo que o banco
+  '42P01': [503, 'Banco de dados desatualizado: rode "npm run migrate" na API'],
 };
 
 export function notFound(req, _res, next) {
@@ -22,8 +24,13 @@ export function errorHandler(err, req, res, _next) {
   if (err.type === 'entity.parse.failed') {
     return res.status(400).json({ error: 'JSON inválido no corpo da requisição' });
   }
+  if (err.type === 'entity.too.large') {
+    const mb = Math.round((err.limit / 1024 / 1024) * 10) / 10;
+    return res.status(413).json({ error: `Conteúdo maior que o limite de ${mb} MB`, details: { limit: err.limit } });
+  }
   if (PG_ERRORS[err.code]) {
     const [status, message] = PG_ERRORS[err.code];
+    if (status >= 500) req.log?.error({ err }, message);
     return res.status(status).json({ error: message });
   }
   req.log?.error({ err }, 'Erro não tratado');

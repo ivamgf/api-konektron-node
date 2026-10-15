@@ -1,29 +1,32 @@
-// Planos do KonekTron (seção 1.2 da especificação, atualizada com CRISP-DM)
+// Planos do KonekTron (seção 1.2 da especificação, atualizada com CRISP-DM e Kanban)
 export const PLANS = Object.freeze({ FREE: 'free', STANDARD: 'standard', MASTER: 'master' });
 export const ROLES = Object.freeze({ CLIENT: 'client', ADMIN: 'admin', PROVIDER: 'provider' });
 
 export const SECTIONS = Object.freeze({
   SYSTEM_ANALYSIS: 'system-analysis',
-  SYSTEM_VIEW: 'system-view',
   ONTOLOGIES: 'ontologies',
   BPM: 'bpm',
   FUNCTION_POINT: 'function-point',
   COMMONKADS: 'commonkads',
   CRISP_DM: 'crisp-dm',
+  KANBAN: 'kanban',
 });
 
 // Seções já implementadas na API (as demais respondem 501)
-export const IMPLEMENTED_SECTIONS = Object.freeze([SECTIONS.SYSTEM_ANALYSIS, SECTIONS.CRISP_DM]);
+export const IMPLEMENTED_SECTIONS = Object.freeze([
+  SECTIONS.SYSTEM_ANALYSIS, SECTIONS.ONTOLOGIES, SECTIONS.BPM, SECTIONS.COMMONKADS, SECTIONS.CRISP_DM, SECTIONS.KANBAN,
+]);
 
-// Tipo de projeto exigido por cada seção implementada
+// Tipo de projeto exigido por seção; as ausentes (Ontologias, BPM, CommonKADS, Kanban) servem a qualquer tipo
 export const SECTION_PROJECT_TYPE = Object.freeze({
   [SECTIONS.SYSTEM_ANALYSIS]: 'software',
   [SECTIONS.CRISP_DM]: 'data_analysis',
 });
 
+// Kanban faz parte de todos os planos
 export const PLAN_SECTIONS = Object.freeze({
-  [PLANS.FREE]: [SECTIONS.SYSTEM_ANALYSIS],
-  [PLANS.STANDARD]: [SECTIONS.SYSTEM_ANALYSIS, SECTIONS.SYSTEM_VIEW, SECTIONS.BPM, SECTIONS.CRISP_DM],
+  [PLANS.FREE]: [SECTIONS.SYSTEM_ANALYSIS, SECTIONS.KANBAN],
+  [PLANS.STANDARD]: [SECTIONS.SYSTEM_ANALYSIS, SECTIONS.BPM, SECTIONS.CRISP_DM, SECTIONS.KANBAN],
   [PLANS.MASTER]: Object.values(SECTIONS),
 });
 

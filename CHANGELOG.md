@@ -1,5 +1,76 @@
 # Changelog
 
+## 4.0.0 — 2026-10-14
+
+### Removido (incompatível)
+- Seção **Visão de Sistema** (`/projects/:projectId/system-view` e a seção `system-view` do catálogo e dos
+  planos): a Análise de Sistemas já cobre requisitos, histórias e diagramas. A migration 000012 continua no
+  histórico e as tabelas dela (`system_specs`, `stakeholders`, `glossary_terms`, `use_cases`, `use_case_flows`,
+  `use_case_relations`, `bdd_scenarios`) não são apagadas: nenhum dado é perdido no deploy.
+
+### Adicionado
+- Seção **Ontologias** (`/projects/:projectId/ontologies`, plano Master, qualquer tipo de projeto): catálogo com
+  título, descrição, formato, IRI, versão, situação, contagens de classes, relacionamentos, propriedades e
+  objetos, vocabulários (RDF, RDFS, OWL, Schema.org, RDFa, SKOS, Dublin Core, FOAF, PROV, DCAT, SHACL...),
+  princípios (FAIR, CARE, 5 estrelas, TRUST), URL de publicação e de repositório, questões de competência e
+  upload do arquivo (OWL, RDF/XML, OWL/XML, Turtle, N-Triples, N3, JSON-LD, OBO, RDFa...). O arquivo é lido na
+  hora: formato, IRI, versão, vocabulários e contagens estimadas preenchem os campos vazios.
+- Seção **BPM** (`/projects/:projectId/bpm`, planos Standard e Master): arquitetura de processos
+  (macroprocesso → atividade, sem ciclos) com SIPOC, indicadores, problemas e melhorias, e diagramas AS IS / TO BE
+  com upload de BPMN 2.0 (contagem de tarefas, eventos, gateways, pools e raias), imagem ou PDF.
+- Seção **CommonKADS** (`/projects/:projectId/commonkads`, plano Master): as 17 planilhas (OM-1 a OM-5, TM-1,
+  TM-2, AM-1, MAS, OTA-1, KM-1, CM-1, CM-2, DM-1 a DM-4) com situação, conteúdo com merge, cadastros de tarefas,
+  conhecimento (com natureza, forma, disponibilidade e gargalos), agentes e transações, visão geral com lacunas
+  entre os modelos e documento completo.
+- Upload/download de arquivos (`shared/files.js`): corpo binário até 20 MB, nome em `X-File-Name`, conteúdo em
+  tabela própria apagada em cascata. Erros 413 (grande demais) e 415 (não enviado como octet-stream).
+- `crudRouter` aceita `afterDelete`; os vínculos jsonb do CommonKADS são limpos quando o registro citado é excluído.
+- Migrations 000013 a 000015; rotas documentadas no OpenAPI (inclusive o corpo binário).
+
+## 3.8.0 — 2026-10-13
+
+### Adicionado
+- `POST /projects/:projectId/system-view/import`: monta a Visão de Sistema a partir de um projeto da
+  Análise de Sistemas — o próprio ou outro projeto `software` do usuário (o admin pode usar qualquer um).
+  Copia análise, requisitos, histórias, diagramas e, se houver, a Visão de Sistema da origem, religando
+  os vínculos (requisitos, generalização, histórias, cenários, `«include»`/`«extend»`). Gera um caso de
+  uso por requisito funcional sem caso de uso (ator e cenário principal vindos da história vinculada) e
+  stakeholders a partir dos papéis das histórias. Nada é sobrescrito; `dryRun: true` devolve a prévia.
+
+## 3.7.0 — 2026-10-13
+
+### Adicionado
+- Seção **Visão de Sistema** (`/projects/:projectId/system-view`), extensão da Análise de Sistemas
+  para projetos `software` nos planos Standard e Master. Base: a *Planilha de Análise* do projeto,
+  a ISO/IEC/IEEE 29148 e o modelo de documentação de casos de uso de Guedes (*UML 2*, tab. 3.1).
+  - Definições do software, stakeholders e glossário de domínio.
+  - Casos de uso com ator principal e secundários, resumo, pré e pós-condições, restrições,
+    generalização (sem ciclos), rastreabilidade com requisitos, cenários principal (um só),
+    alternativos e de exceção (passos ator/sistema) e relações `«include»`/`«extend»`.
+  - BDD: cenários Dado/Quando/Então, gerados a partir dos fluxos do caso de uso ou cadastrados à
+    mão, e exportação Gherkin (`.feature` por história) em português, inglês ou espanhol.
+  - Visão geral com lacunas de rastreabilidade e documento de especificação completo.
+- Tipo de requisito `domain` (requisitos de domínio, RD) na Análise de Sistemas.
+- Migration 000012; rotas documentadas no OpenAPI.
+
+## 3.6.0 — 2026-10-12
+
+### Adicionado
+- Espanhol: o perfil aceita `locale: "es"` e as fases do CRISP-DM trazem o nome em `es`.
+
+### Alterado
+- Português (`pt-BR`) passa a ser o idioma padrão dos perfis novos (migration 000011);
+  perfis existentes mantêm o idioma que têm.
+
+## 3.5.0 — 2026-10-12
+
+### Adicionado
+- Seção **Kanban** (`/projects/:projectId/kanban`), em todos os planos e para qualquer tipo
+  de projeto: quadro com colunas ordenadas (limite WIP opcional) e cartões com prioridade,
+  prazo e responsável. `POST /columns/:id/move` e `POST /cards/:id/move` reordenam os
+  vizinhos numa transação e devolvem o quadro atualizado.
+- Migration 000010 (`kanban_columns`, `kanban_cards`); rotas na documentação OpenAPI.
+
 ## 3.4.0 — 2026-10-11
 
 ### Adicionado

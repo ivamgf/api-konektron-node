@@ -9,7 +9,15 @@ import * as logs from '#modules/logs/logs.schemas.js';
 import * as projects from '#modules/projects/projects.schemas.js';
 import * as sa from '#modules/system-analysis/systemAnalysis.schemas.js';
 import * as dm from '#modules/crisp-dm/crispdm.schemas.js';
+import * as kb from '#modules/kanban/kanban.schemas.js';
+import * as on from '#modules/ontologies/ontologies.schemas.js';
+import * as bpm from '#modules/bpm/bpm.schemas.js';
+import * as ck from '#modules/commonkads/commonkads.schemas.js';
 import { PHASES } from '#modules/crisp-dm/crispdm.constants.js';
+import { FILE_EXTENSIONS as ONTOLOGY_FILES } from '#modules/ontologies/ontologies.constants.js';
+import { FILE_EXTENSIONS as BPM_FILES } from '#modules/bpm/bpm.constants.js';
+import { WORKSHEETS } from '#modules/commonkads/commonkads.constants.js';
+import { MAX_FILE_BYTES } from '#shared/files.js';
 
 // Especificação OpenAPI 3.1 gerada a partir dos schemas Zod usados na validação:
 // corpos, filtros, limites e enums nunca divergem do código. Ao criar uma rota nova,
@@ -69,6 +77,8 @@ const ERRORS = {
   403: 'Sem permissão: papel insuficiente ou seção fora do plano',
   404: 'Recurso não encontrado (ou pertence a outro usuário)',
   409: 'Conflito: registro duplicado, em uso ou tipo de projeto incompatível',
+  413: 'Arquivo maior que o limite',
+  415: 'O arquivo deve ser enviado como application/octet-stream',
   422: 'Dados inválidos; `details` traz os erros por campo',
   429: 'Muitas tentativas; aguarde e tente novamente',
 };
@@ -80,13 +90,19 @@ const PATH_PARAMS = {
   modelId: 'ID do modelo',
 };
 
+// Parâmetros de rota que não são uuid
+const ENUM_PARAMS = {
+  phase: () => toSchema(dm.phaseParams).properties.phase,
+  key: () => toSchema(ck.worksheetParams).properties.key,
+};
+
 // ---------- Registro das operações ----------
 const paths = {};
 
 function add(method, path, o) {
   const pathParams = [...path.matchAll(/\{(\w+)\}/g)].map(([, name]) =>
-    name === 'phase'
-      ? { name, in: 'path', required: true, schema: toSchema(dm.phaseParams).properties.phase }
+    ENUM_PARAMS[name]
+      ? { name, in: 'path', required: true, schema: ENUM_PARAMS[name]() }
       : { name, in: 'path', required: true, schema: uuid, description: PATH_PARAMS[name] },
   );
 
@@ -103,11 +119,17 @@ function add(method, path, o) {
   // exemplo desatualizado quebra o build da especificação (e o teste), em vez de enganar o leitor
   if (o.example) o.body.parse(o.example);
 
+  // upload de arquivo: corpo binário e o nome no cabeçalho X-File-Name
+  const headerParams = o.upload
+    ? [{ name: 'X-File-Name', in: 'header', required: true, schema: { type: 'string' }, description: 'Nome do arquivo (encodeURIComponent)' }]
+    : [];
+  const binary = { 'application/octet-stream': { schema: { type: 'string', format: 'binary' } } };
+
   const isPublic = o.auth === false;
   const status = o.status ?? 200;
   const codes = new Set(o.errors ?? []);
   if (!isPublic) codes.add(401);
-  if (o.body || o.query || pathParams.length) codes.add(422);
+  if (o.body || o.upload || o.query || pathParams.length) codes.add(422);
   if (pathParams.length) codes.add(404);
 
   paths[path] ??= {};
@@ -116,7 +138,10 @@ function add(method, path, o) {
     summary: o.summary,
     ...(o.description && { description: o.description }),
     security: isPublic ? [] : [{ bearerAuth: [] }],
-    ...(pathParams.length + queryParams.length && { parameters: [...pathParams, ...queryParams] }),
+    ...(pathParams.length + queryParams.length + headerParams.length && {
+      parameters: [...pathParams, ...queryParams, ...headerParams],
+    }),
+    ...(o.upload && { requestBody: { required: true, description: o.upload, content: binary } }),
     ...(o.body && {
       requestBody: {
         required: true,
@@ -129,14 +154,17 @@ function add(method, path, o) {
       [status]:
         status === 204
           ? { description: 'Sem conteúdo' }
-          : { description: o.responseDescription ?? 'Sucesso', content: { 'application/json': { schema: o.response ?? {} } } },
+          : {
+              description: o.responseDescription ?? 'Sucesso',
+              content: o.binary ? binary : { 'application/json': { schema: o.response ?? {} } },
+            },
       ...Object.fromEntries([...codes].sort().map((c) => [c, { $ref: `#/components/responses/E${c}` }])),
     },
   };
 }
 
 // GET/POST na coleção e GET/PATCH/DELETE no item, como o shared/crudRouter
-function crud(base, { tag, name, label, plural, schema, filters, example, errors = [] }) {
+function crud(base, { tag, name, label, plural, schema, updateSchema = schema.partial(), filters, example, errors = [] }) {
   const item = `${base}/{id}`;
   add('get', base, { tag, summary: `Listar ${plural}`, query: filters, errors, response: arrayOf(ref(name)) });
   add('post', base, {
@@ -147,11 +175,32 @@ function crud(base, { tag, name, label, plural, schema, filters, example, errors
     tag,
     summary: `Atualizar ${label}`,
     description: 'Atualização parcial: envie só os campos que mudaram.',
-    body: schema.partial(),
+    body: updateSchema,
     errors: [...errors, 400, 409],
     response: ref(name),
   });
   add('delete', item, { tag, summary: `Excluir ${label}`, status: 204, errors });
+}
+
+// PUT/GET/DELETE {item}/file, como o shared/files.js
+function fileOps(item, { tag, name, label, extensions, analysis, errors = [] }) {
+  const mb = MAX_FILE_BYTES / 1024 / 1024;
+  const accepted = extensions.map((e) => `\`.${e}\``).join(', ');
+  add('put', `${item}/file`, {
+    tag,
+    summary: `Enviar o arquivo do(a) ${label}`,
+    description:
+      `Corpo = o arquivo bruto (\`Content-Type: application/octet-stream\`), até ${mb} MB; o nome vai no cabeçalho ` +
+      `\`X-File-Name\`. Extensões aceitas: ${accepted}. Substitui o arquivo anterior. ${analysis}`,
+    upload: 'Conteúdo do arquivo',
+    errors: [...errors, 413, 415],
+    response: { allOf: [ref(name), object({ analysis: { description: 'Leitura do arquivo (ou null)' } })] },
+  });
+  add('get', `${item}/file`, {
+    tag, summary: `Baixar o arquivo do(a) ${label}`, errors, binary: true,
+    description: 'Devolve o arquivo com o tipo e o nome originais (Content-Disposition).',
+  });
+  add('delete', `${item}/file`, { tag, summary: `Remover o arquivo do(a) ${label}`, status: 204, errors });
 }
 
 // ---------- Sistema ----------
@@ -402,8 +451,159 @@ crud(`${DM}/models/{modelId}/metrics`, {
   example: { metric: 'recall', value: 0.81, split: 'test' },
 });
 
+// ---------- Ontologias ----------
+const T_ON = 'Ontologias';
+const ON = '/projects/{projectId}/ontologies';
+const anySection = [403]; // seções para qualquer tipo de projeto: só o plano importa
+add('get', `${ON}/summary`, {
+  tag: T_ON, summary: 'Resumo do catálogo',
+  description: 'Totais de ontologias, publicadas, com arquivo, soma das contagens e uso de formatos, vocabulários e princípios.',
+  errors: anySection, response: ref('OntologySummary'),
+});
+crud(ON, {
+  tag: T_ON, name: 'Ontology', label: 'ontologia', plural: 'ontologias',
+  schema: on.ontologySchema, filters: on.ontologyFilters, errors: anySection,
+  example: {
+    title: 'Ontologia de Agendamento', format: 'rdf_xml', iri: 'https://exemplo.com/onto/agenda', version: '1.0',
+    status: 'published', classCount: 42, relationshipCount: 18, propertyCount: 25, objectCount: 120,
+    vocabularies: ['owl', 'rdfs', 'schema', 'skos', 'dublin_core'], principles: ['fair'],
+    publicationUrl: 'https://exemplo.com/onto/agenda.owl',
+  },
+});
+fileOps(`${ON}/{id}`, {
+  tag: T_ON, name: 'Ontology', label: 'ontologia', extensions: ONTOLOGY_FILES, errors: anySection,
+  analysis:
+    'O arquivo é lido na hora: formato, IRI, versão, vocabulários (pelos namespaces) e contagens estimadas de classes, ' +
+    'relacionamentos (propriedades de objeto), propriedades (de dados) e objetos (indivíduos). Só os campos vazios são ' +
+    'preenchidos; a análise completa volta em `analysis` e fica guardada no registro.',
+});
+
+// ---------- BPM ----------
+const T_BPM = 'BPM';
+const BPM = '/projects/{projectId}/bpm';
+add('get', BPM, {
+  tag: T_BPM, summary: 'Visão geral',
+  description: 'Processos para montar a arquitetura (árvore por `parentId`), contagens por nível, situação e diagramas, e se o SIPOC de cada processo está completo.',
+  errors: anySection, response: ref('BpmOverview'),
+});
+crud(`${BPM}/processes`, {
+  tag: T_BPM, name: 'BpmProcess', label: 'processo', plural: 'processos',
+  schema: bpm.processSchema, filters: bpm.processFilters, errors: anySection,
+  example: {
+    code: 'P1', name: 'Agendar atendimento', level: 'process', owner: 'Recepção',
+    suppliers: 'Cliente', inputs: 'Pedido de horário', steps: 'Receber pedido\nVerificar agenda\nConfirmar horário',
+    outputs: 'Horário confirmado', customers: 'Cliente',
+  },
+});
+crud(`${BPM}/diagrams`, {
+  tag: T_BPM, name: 'BpmDiagram', label: 'diagrama', plural: 'diagramas',
+  schema: bpm.diagramSchema, filters: bpm.diagramFilters, errors: anySection,
+  example: { title: 'Agendamento — AS IS', state: 'as_is', tool: 'Camunda Modeler', version: '1' },
+});
+fileOps(`${BPM}/diagrams/{id}`, {
+  tag: T_BPM, name: 'BpmDiagram', label: 'diagrama', extensions: BPM_FILES, errors: anySection,
+  analysis:
+    'Arquivos BPMN 2.0 (`.bpmn`/`.xml`) são lidos: contagem de tarefas, eventos, gateways, fluxos, pools e raias, ' +
+    'e os nomes de processos, participantes e tarefas vão para `metrics`. Imagens e PDF são só guardados.',
+});
+
+// ---------- CommonKADS ----------
+const T_CK = 'CommonKADS';
+const CK = '/projects/{projectId}/commonkads';
+const worksheetTable = WORKSHEETS.map(
+  (w) => `| \`${w.key}\` | ${w.fields ? w.fields.map((f) => `\`${f}\``).join(', ') : `cadastro \`/${w.resource}\``} |`,
+).join('\n');
+add('get', CK, {
+  tag: T_CK, summary: 'Visão geral',
+  description: 'Progresso (planilhas concluídas), situação de cada planilha, contagens e lacunas entre os modelos (tarefas sem agente, conhecimento sem uso...).',
+  errors: anySection, response: ref('CommonKadsOverview'),
+});
+add('get', `${CK}/report`, {
+  tag: T_CK, summary: 'Documento completo',
+  description: 'Todas as planilhas e cadastros, com as relações resolvidas nos dois sentidos (ex.: conhecimento → agentes que o possuem e tarefas que o usam).',
+  errors: anySection, response: { type: 'object' },
+});
+add('get', `${CK}/worksheets`, {
+  tag: T_CK, summary: 'Listar as 17 planilhas', errors: anySection, response: arrayOf(ref('CommonKadsWorksheet')),
+});
+add('get', `${CK}/worksheets/{key}`, { tag: T_CK, summary: 'Obter planilha', errors: anySection, response: ref('CommonKadsWorksheet') });
+add('patch', `${CK}/worksheets/{key}`, {
+  tag: T_CK, summary: 'Atualizar planilha',
+  description:
+    '`content` faz *merge*: envie só os campos que mudaram (`null` apaga). As planilhas em linhas (OM-3, OM-4, TM-1, ' +
+    'TM-2, AM-1, MAS, CM-1, CM-2) aceitam só `status` e `notes`; o conteúdo delas vem dos cadastros.\n\n' +
+    `| Planilha | Campos de \`content\` |\n|---|---|\n${worksheetTable}`,
+  body: ck.worksheetUpdateSchema, errors: [...anySection, 400], response: ref('CommonKadsWorksheet'),
+  example: { status: 'in_progress', content: { problemsOpportunities: 'Diagnósticos dependem de poucos especialistas.' } },
+});
+crud(`${CK}/tasks`, {
+  tag: T_CK, name: 'CkTask', label: 'tarefa (OM-3/TM-1)', plural: 'tarefas (OM-3/TM-1)',
+  schema: ck.taskSchema, errors: anySection,
+  example: { code: 'T1', name: 'Diagnosticar falha', location: 'Suporte técnico', knowledgeIntensive: true, significance: 5 },
+});
+crud(`${CK}/knowledge`, {
+  tag: T_CK, name: 'CkKnowledge', label: 'item de conhecimento (OM-4/TM-2)', plural: 'itens de conhecimento (OM-4/TM-2)',
+  schema: ck.knowledgeSchema, errors: anySection,
+  example: {
+    name: 'Regras de diagnóstico', domain: 'Manutenção de equipamentos', rightForm: false, rightFormNotes: 'Só na cabeça dos técnicos',
+    characterization: { nature: { heuristic: { applies: true, bottleneck: true } }, form: { mind: { applies: true } } },
+  },
+});
+crud(`${CK}/agents`, {
+  tag: T_CK, name: 'CkAgent', label: 'agente (AM-1/MAS)', plural: 'agentes (AM-1/MAS)',
+  schema: ck.agentSchema, errors: anySection,
+  example: { name: 'Técnico de suporte', kind: 'human', responsibilities: 'Fecha o diagnóstico; não autoriza troca de peças.' },
+});
+crud(`${CK}/transactions`, {
+  tag: T_CK, name: 'CkTransaction', label: 'transação (CM-1/CM-2)', plural: 'transações (CM-1/CM-2)',
+  schema: ck.transactionSchema, errors: anySection,
+  example: {
+    code: 'TR1', name: 'Informar diagnóstico', informationObject: 'Diagnóstico',
+    informationItems: [{ name: 'Diagnóstico', role: 'core', form: 'texto', medium: 'janela' }],
+    messages: [{ type: 'report', content: 'Diagnóstico concluído' }],
+  },
+});
+
+// ---------- Kanban ----------
+const T_KB = 'Kanban';
+const KB = '/projects/{projectId}/kanban';
+add('get', KB, {
+  tag: T_KB, summary: 'Quadro completo', description: 'Colunas em ordem, cada uma com seus cartões em ordem.',
+  errors: [403], response: ref('KanbanBoard'),
+});
+crud(`${KB}/columns`, {
+  tag: T_KB, name: 'KanbanColumn', label: 'coluna', plural: 'colunas',
+  schema: kb.columnSchema, errors: [403],
+  example: { name: 'Em andamento', wipLimit: 3 },
+});
+add('post', `${KB}/columns/{id}/move`, {
+  tag: T_KB, summary: 'Mover coluna', description: 'Reordena as colunas do quadro e devolve o quadro atualizado.',
+  body: kb.moveColumnSchema, errors: [403], response: ref('KanbanBoard'), example: { position: 0 },
+});
+crud(`${KB}/cards`, {
+  tag: T_KB, name: 'KanbanCard', label: 'cartão', plural: 'cartões',
+  schema: kb.cardSchema, updateSchema: kb.cardUpdateSchema, filters: kb.cardFilters, errors: [403],
+  example: {
+    columnId: '0b0f6d0e-3c1a-4f6e-9d55-1f2a3b4c5d6e', title: 'Tela de agendamento', priority: 'high',
+    dueDate: '2026-11-30', assignee: 'Ana',
+  },
+});
+add('post', `${KB}/cards/{id}/move`, {
+  tag: T_KB, summary: 'Mover cartão',
+  description: 'Muda o cartão de coluna e/ou posição, reordenando os vizinhos. Devolve o quadro atualizado.',
+  body: kb.moveCardSchema, errors: [403], response: ref('KanbanBoard'),
+  example: { columnId: '0b0f6d0e-3c1a-4f6e-9d55-1f2a3b4c5d6e', position: 0 },
+});
+
 // ---------- Schemas de resposta ----------
 const tokens = { accessToken: { type: 'string' }, refreshToken: { type: 'string' } };
+const fileMeta = {
+  fileName: nullable({ type: 'string' }),
+  fileMime: nullable({ type: 'string' }),
+  fileSize: nullable({ type: 'integer' }),
+  fileSha256: nullable({ type: 'string' }),
+  fileUploadedAt: nullable(dateTime),
+};
 const user = object(
   {
     id: uuid,
@@ -525,6 +725,57 @@ const schemas = {
   CrispDmPreparationStep: entity(dm.preparationStepSchema, { projectId: uuid }),
   CrispDmModel: entity(dm.modelSchema, { projectId: uuid }),
   CrispDmModelMetric: entity(dm.modelMetricSchema, { modelId: uuid }),
+  Ontology: entity(on.ontologySchema, { projectId: uuid, analysis: { type: ['object', 'null'] }, ...fileMeta }),
+  OntologySummary: object({
+    total: { type: 'integer' },
+    withFile: { type: 'integer' },
+    published: { type: 'integer' },
+    totals: counts,
+    byFormat: counts,
+    byStatus: counts,
+    vocabularies: counts,
+    principles: counts,
+  }),
+  BpmProcess: entity(bpm.processSchema, { projectId: uuid }),
+  BpmDiagram: entity(bpm.diagramSchema, { projectId: uuid, metrics: { type: ['object', 'null'] }, ...fileMeta }),
+  BpmOverview: object({
+    processes: arrayOf(object({
+      id: uuid, code: { type: 'string' }, name: { type: 'string' }, parentId: nullable(uuid), level: { type: 'string' },
+      status: { type: 'string' }, owner: nullable({ type: 'string' }), sipocComplete: { type: 'boolean' }, diagrams: { type: 'integer' },
+    })),
+    counts: { type: 'object' },
+  }),
+  CommonKadsWorksheet: object({
+    key: toSchema(ck.worksheetParams).properties.key,
+    model: { type: 'string' },
+    order: { type: 'integer' },
+    fields: arrayOf({ type: 'string' }),
+    resource: { type: 'string', description: 'Cadastro que preenche a planilha (planilhas em linhas)' },
+    status: toSchema(ck.worksheetUpdateSchema).properties.status,
+    content: { type: 'object' },
+    notes: nullable({ type: 'string' }),
+    updatedAt: nullable(dateTime),
+  }),
+  CommonKadsOverview: object({
+    progress: { type: 'integer', description: '% de planilhas concluídas' },
+    worksheets: arrayOf({ type: 'object' }),
+    counts,
+    gaps: object({
+      tasksWithoutAgent: arrayOf({ type: 'string' }),
+      knowledgeNotUsed: arrayOf({ type: 'string' }),
+      agentsWithoutTask: arrayOf({ type: 'string' }),
+      transactionsWithoutAgents: arrayOf({ type: 'string' }),
+    }),
+  }),
+  CkTask: entity(ck.taskSchema, { projectId: uuid }),
+  CkKnowledge: entity(ck.knowledgeSchema, { projectId: uuid }),
+  CkAgent: entity(ck.agentSchema, { projectId: uuid }),
+  CkTransaction: entity(ck.transactionSchema, { projectId: uuid }),
+  KanbanColumn: entity(kb.columnSchema, { projectId: uuid, position: { type: 'integer' } }),
+  KanbanCard: entity(kb.cardSchema, { projectId: uuid, position: { type: 'integer' } }),
+  KanbanBoard: object({
+    columns: arrayOf({ allOf: [ref('KanbanColumn'), object({ cards: arrayOf(ref('KanbanCard')) })] }),
+  }),
 };
 
 // ---------- Documento ----------
@@ -572,6 +823,10 @@ export function buildOpenApi() {
       { name: T_PROJ, description: 'Projetos `software` ou `data_analysis` e catálogo de seções' },
       { name: T_SA, description: 'Requisitos, histórias de usuário e diagramas. Projetos `software`, todos os planos.' },
       { name: T_DM, description: 'Metodologia CRISP-DM. Projetos `data_analysis`, planos Standard e Master.' },
+      { name: T_ON, description: 'Catálogo de ontologias com métricas, vocabulários, princípios e o arquivo (OWL, RDF, Turtle...). Qualquer tipo de projeto, plano Master.' },
+      { name: T_BPM, description: 'Arquitetura de processos com SIPOC e diagnóstico, e diagramas BPMN com upload. Qualquer tipo de projeto, planos Standard e Master.' },
+      { name: T_CK, description: 'Planilhas CommonKADS (OM, TM, AM, KM, CM, DM, OTA) e MAS-CommonKADS. Qualquer tipo de projeto, plano Master.' },
+      { name: T_KB, description: 'Quadro de tarefas com colunas e cartões. Qualquer tipo de projeto, todos os planos.' },
     ],
     paths,
     components: {

@@ -11,7 +11,7 @@ export const updateProfileSchema = z.object({
   department: optText(200),
   jobTitle: optText(200),
   birthDate: z.iso.date().nullable().optional(),
-  locale: z.enum(['en', 'pt-BR']).optional(),
+  locale: z.enum(['pt-BR', 'en', 'es']).optional().describe('Idioma da interface: português (padrão), inglês ou espanhol'),
   socialNetworks: z
     .array(z.object({ network: z.string().trim().min(1).max(50), url: z.url().max(500) }))
     .max(20)
