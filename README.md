@@ -27,7 +27,10 @@ src/
     ├── ontologies/   catálogo de ontologias com arquivo e leitura automática (qualquer projeto)
     ├── bpm/          arquitetura de processos, SIPOC e diagramas BPMN (qualquer projeto)
     ├── commonkads/   planilhas CommonKADS e MAS-CommonKADS (qualquer projeto)
+    ├── function-points/  contagem de Pontos de Função IFPUG (projetos de software)
+    ├── scrum/        papéis, backlogs, sprints, tasks e eventos (qualquer projeto)
     ├── kanban/       quadro de tarefas (qualquer projeto)
+    ├── contact/      formulário de contato e caixa de mensagens do admin
     └── engineering/  RF6 — catálogo de seções (as não implementadas respondem 501)
 ```
 
@@ -174,6 +177,40 @@ curl -X PUT $API/projects/$ID/ontologies/$ONTO/file \
   -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/octet-stream' \
   -H 'X-File-Name: agenda.owl' --data-binary @agenda.owl
 ```
+
+### Pontos de Função — `/projects/:projectId/function-points`
+
+Plano Master, projetos `software` (migration 000017). Contagem IFPUG: a API calcula a complexidade
+(matriz TR × TD para ALI/AIE, ALR × TD para EE/SE/CE) e os PF de cada função na gravação.
+
+| Método | Rota | Observação |
+|---|---|---|
+| GET | / | contagens com o número de funções e o total de PF |
+| CRUD | /counts | `name`, `countType` (`development`, `enhancement`, `application`), propósito, escopo, `hoursPerFp`, `costPerHour`, `currency` |
+| GET | /counts/:id/summary | contagem, funções e o resumo: escopo (ALI/AIE), complexidade (TD/TR), contribuição, PF de dados e de transação, PF por ação (melhoria), esforço e custo |
+| CRUD | /counts/:countId/functions | `type` (`ilf` ALI, `eif` AIE, `ei` EE, `eo` SE, `eq` CE), `det` (TD), `retFtr` (TR ou ALR), `action` (melhoria); filtros `?type=&complexity=` |
+
+### Scrum — `/projects/:projectId/scrum`
+
+Planos Standard e Master, qualquer tipo de projeto (migration 000018), segundo o Guia do Scrum 2020.
+
+| Método | Rota | Observação |
+|---|---|---|
+| GET | / | papéis, contagens, eventos por tipo, velocidade e a sprint atual com burndown |
+| GET · PATCH | /settings | visão, Meta do Produto, Definição de Preparado e de Pronto, duração da sprint, acordos de trabalho |
+| CRUD | /members | `role` (`product_owner`, `scrum_master`, `developer`, `stakeholder`), capacidade em horas |
+| CRUD | /items | Product Backlog: `code`, `type`, `storyPoints` (Fibonacci), valor de negócio, critérios de aceitação; `sprintId` põe o item no Sprint Backlog |
+| POST | /items/:id/move | `{ position }`; reordena o Product Backlog |
+| CRUD | /sprints | `number`, meta, datas, `status`, incremento (texto, versão, URL) |
+| GET | /sprints/:id/detail | sprint com itens, tasks, eventos e burndown |
+| CRUD | /tasks | `sprintId`, `itemId`, `assigneeId`, `status` (`todo`, `in_progress`, `done`), horas estimadas e restantes |
+| CRUD | /events | `type` (`planning`, `daily`, `review`, `retrospective`, `refinement`), data, facilitador, participantes, `updates` da daily, campos da review e da retrospectiva |
+
+### Contato — `/contact` e `/admin/contact-messages`
+
+`POST /contact` é público (5 envios a cada 15 minutos): `name`, `email`, `subject`, `message`. A mensagem
+fica no banco (migration 000016) e, com `CONTACT_EMAIL` definido, também vai por e-mail. O admin lista
+(`?status=&page=`), muda a situação (`new`, `read`, `answered`, `archived`) e exclui em `/admin/contact-messages`.
 
 ### Kanban — `/projects/:projectId/kanban`
 

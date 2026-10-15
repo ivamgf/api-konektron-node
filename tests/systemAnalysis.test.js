@@ -45,7 +45,7 @@ test('troca de senha: confirmação e senha nova diferente da atual', () => {
 
 test('seções implementadas: as de metodologia exigem um tipo de projeto, as demais servem a qualquer tipo', () => {
   assert.ok(IMPLEMENTED_SECTIONS.includes(SECTIONS.SYSTEM_ANALYSIS));
-  const anyType = [SECTIONS.ONTOLOGIES, SECTIONS.BPM, SECTIONS.COMMONKADS, SECTIONS.KANBAN];
+  const anyType = [SECTIONS.ONTOLOGIES, SECTIONS.BPM, SECTIONS.COMMONKADS, SECTIONS.SCRUM, SECTIONS.KANBAN];
   for (const s of IMPLEMENTED_SECTIONS) {
     if (anyType.includes(s)) assert.equal(SECTION_PROJECT_TYPE[s], undefined, s);
     else assert.ok(SECTION_PROJECT_TYPE[s], s);

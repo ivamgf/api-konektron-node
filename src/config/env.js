@@ -37,6 +37,8 @@ const schema = z
     SMTP_USER: z.string().optional(),
     SMTP_PASSWORD: z.string().optional(),
     MAIL_FROM: z.string().optional(),
+    // destino das mensagens do formulário de contato (vazio: as mensagens só ficam no banco)
+    CONTACT_EMAIL: z.preprocess((v) => (typeof v === 'string' && !v.trim() ? undefined : v), z.email().optional()),
     CORS_ORIGINS: z.string().default(''),
     DOCS_ENABLED: z.enum(['true', 'false']).default('true'),
   })

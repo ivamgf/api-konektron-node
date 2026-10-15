@@ -1,24 +1,6 @@
 import { db } from '#database/connection.js';
+import { insertAt, nextPosition, renumber } from '#shared/ordering.js';
 import { AppError } from '#utils/AppError.js';
-
-// Reescreve as posições na ordem de `ids` (0..n-1), tocando só as linhas que mudaram
-async function renumber(trx, table, rows, ids, extra = {}) {
-  const current = Object.fromEntries(rows.map((r) => [r.id, r]));
-  await Promise.all(
-    ids.map((id, position) => {
-      const row = current[id];
-      const changed = !row || row.position !== position || Object.entries(extra).some(([k, v]) => row[k] !== v);
-      return changed ? trx(table).where({ id }).update({ position, ...extra }) : null;
-    }),
-  );
-}
-
-// Insere `id` em `ids` na posição pedida (acima do fim vai para o fim)
-const insertAt = (ids, id, position) => {
-  const out = ids.filter((x) => x !== id);
-  out.splice(Math.min(position, out.length), 0, id);
-  return out;
-};
 
 // Trava as colunas do projeto: movimentos simultâneos no mesmo quadro ficam em fila
 const lockBoard = (trx, projectId) => trx('kanban_columns').where({ projectId }).forUpdate().select('id');
@@ -33,10 +15,7 @@ export const kanbanService = {
     return { columns: columns.map((c) => ({ ...c, cards: byColumn[c.id] ?? [] })) };
   },
 
-  async nextPosition(trx, table, where) {
-    const row = await trx(table).where(where).max({ max: 'position' }).first();
-    return row?.max == null ? 0 : row.max + 1;
-  },
+  nextPosition,
 
   async assertColumnInProject(trx, projectId, columnId) {
     const column = await trx('kanban_columns').where({ id: columnId, projectId }).first('id');
