@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TASK_STATUS } from '#modules/scrum/scrum.schemas.js';
 import { longText, optText } from '#shared/schemas.js';
 
 // Kanban — quadro de tarefas de qualquer projeto
@@ -7,6 +8,11 @@ export const CARD_PRIORITIES = ['low', 'medium', 'high', 'urgent'];
 export const columnSchema = z.object({
   name: z.string().trim().min(1).max(60),
   wipLimit: z.number().int().min(1).max(999).nullable().optional().describe('Limite de cartões (informativo)'),
+  taskStatus: z
+    .enum(TASK_STATUS)
+    .nullable()
+    .optional()
+    .describe('Situação das tasks do Scrum nesta coluna: o cartão de uma task que entra aqui muda a task para ela'),
 });
 
 export const cardSchema = z.object({

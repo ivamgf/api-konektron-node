@@ -11,18 +11,28 @@ const transporter = env.SMTP_HOST
     })
   : null;
 
-export async function sendMail({ to, subject, html }) {
+// Texto vindo do usuário dentro de um e-mail HTML
+export const escapeHtml = (value) =>
+  String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+export async function sendMail({ to, subject, html, replyTo }) {
   if (!transporter) {
     logger.warn({ to, subject, html }, 'SMTP não configurado — e-mail apenas registrado no log');
     return;
   }
-  await transporter.sendMail({ from: env.MAIL_FROM, to, subject, html });
+  await transporter.sendMail({ from: env.MAIL_FROM, to, subject, html, ...(replyTo && { replyTo }) });
 }
 
 export const mailTemplates = {
   activation: (link) => ({
     subject: 'KonekTron — Ative sua conta',
     html: `<p>Bem-vindo ao KonekTron!</p><p><a href="${link}">Clique aqui para ativar sua conta</a>.</p>`,
+  }),
+  contact: ({ name, email, subject, message }) => ({
+    subject: `KonekTron — Contato: ${subject}`,
+    html:
+      `<p><strong>${escapeHtml(name)}</strong> &lt;${escapeHtml(email)}&gt; escreveu pelo formulário de contato:</p>` +
+      `<p><strong>${escapeHtml(subject)}</strong></p><p style="white-space:pre-wrap">${escapeHtml(message)}</p>`,
   }),
   resetPassword: (link) => ({
     subject: 'KonekTron — Recuperação de senha',

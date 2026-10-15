@@ -9,6 +9,8 @@ import kanbanRoutes from '#modules/kanban/kanban.routes.js';
 import ontologiesRoutes from '#modules/ontologies/ontologies.routes.js';
 import bpmRoutes from '#modules/bpm/bpm.routes.js';
 import commonkadsRoutes from '#modules/commonkads/commonkads.routes.js';
+import fpRoutes from '#modules/function-points/fp.routes.js';
+import scrumRoutes from '#modules/scrum/scrum.routes.js';
 import { createProjectSchema, listQuery, updateProjectSchema } from './projects.schemas.js';
 import { projectsService as s } from './projects.service.js';
 
@@ -40,10 +42,12 @@ router.delete('/:projectId', loadProject(), async (req, res) => {
 // Módulos por tipo de projeto
 router.use('/:projectId/system-analysis', systemAnalysisRoutes);
 router.use('/:projectId/crisp-dm', crispdmRoutes);
+router.use('/:projectId/function-points', fpRoutes);
 // Módulos para qualquer tipo de projeto
 router.use('/:projectId/ontologies', ontologiesRoutes);
 router.use('/:projectId/bpm', bpmRoutes);
 router.use('/:projectId/commonkads', commonkadsRoutes);
+router.use('/:projectId/scrum', scrumRoutes);
 router.use('/:projectId/kanban', kanbanRoutes);
 
 export default router;

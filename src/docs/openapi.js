@@ -18,6 +18,10 @@ import { FILE_EXTENSIONS as ONTOLOGY_FILES } from '#modules/ontologies/ontologie
 import { FILE_EXTENSIONS as BPM_FILES } from '#modules/bpm/bpm.constants.js';
 import { WORKSHEETS } from '#modules/commonkads/commonkads.constants.js';
 import { MAX_FILE_BYTES } from '#shared/files.js';
+import * as ct from '#modules/contact/contact.schemas.js';
+import * as fp from '#modules/function-points/fp.schemas.js';
+import { WEIGHTS } from '#modules/function-points/fp.rules.js';
+import * as sc from '#modules/scrum/scrum.schemas.js';
 
 // Especificação OpenAPI 3.1 gerada a partir dos schemas Zod usados na validação:
 // corpos, filtros, limites e enums nunca divergem do código. Ao criar uma rota nova,
@@ -88,6 +92,7 @@ const PATH_PARAMS = {
   projectId: 'ID do projeto',
   datasetId: 'ID do dataset',
   modelId: 'ID do modelo',
+  countId: 'ID da contagem de pontos de função',
 };
 
 // Parâmetros de rota que não são uuid
@@ -564,6 +569,113 @@ crud(`${CK}/transactions`, {
   },
 });
 
+// ---------- Contato ----------
+const T_CT = 'Contato';
+add('post', '/contact', {
+  tag: T_CT, auth: false, summary: 'Enviar mensagem pelo formulário de contato', status: 201,
+  description:
+    'Pública (com token, a mensagem fica ligada ao usuário). Guarda a mensagem e a envia para `CONTACT_EMAIL`, ' +
+    'com resposta para o e-mail informado. Limite de 5 mensagens a cada 15 min por IP. O campo `website` é uma ' +
+    'armadilha para robôs: se vier preenchido, a resposta é 202 e nada é gravado.',
+  body: ct.contactSchema, errors: [429], response: object({ id: uuid, createdAt: dateTime, message: { type: 'string' } }),
+  example: { name: 'Ana Souza', email: 'ana@exemplo.com', subject: 'Plano Master', message: 'Gostaria de saber mais sobre o plano Master.' },
+});
+add('get', '/admin/contact-messages', {
+  tag: T_CT, summary: 'Mensagens de contato (admin)', query: ct.contactListQuery, errors: [403],
+  response: { allOf: [paginated(ref('ContactMessage')), object({ byStatus: counts })] },
+});
+add('patch', '/admin/contact-messages/{id}', {
+  tag: T_CT, summary: 'Mudar a situação da mensagem (admin)', body: ct.contactUpdateSchema, errors: [403],
+  response: ref('ContactMessage'), example: { status: 'answered' },
+});
+add('delete', '/admin/contact-messages/{id}', { tag: T_CT, summary: 'Excluir mensagem (admin)', status: 204, errors: [403] });
+
+// ---------- Pontos de Função ----------
+const T_FP = 'Pontos de Função';
+const FP = '/projects/{projectId}/function-points';
+const weightTable = Object.entries(WEIGHTS)
+  .map(([type, w]) => `| \`${type}\` | ${w.low} | ${w.average} | ${w.high} |`)
+  .join('\n');
+add('get', FP, {
+  tag: T_FP, summary: 'Contagens com o total de PF', errors: sectionErrors, response: arrayOf(ref('FpCount')),
+});
+crud(`${FP}/counts`, {
+  tag: T_FP, name: 'FpCount', label: 'contagem', plural: 'contagens', schema: fp.countSchema, errors: sectionErrors,
+  example: { name: 'Contagem inicial', countType: 'development', hoursPerFp: 8, costPerHour: 120, currency: 'BRL' },
+});
+add('get', `${FP}/counts/{id}/summary`, {
+  tag: T_FP, summary: 'Resumo da contagem',
+  description:
+    'Determinação do escopo (ALI/AIE), totais de TD e TR, contribuição por tipo e complexidade, total de PF e, com ' +
+    'produtividade e custo informados, a estimativa de esforço e custo. Contribuição (IFPUG):\n\n' +
+    `| Tipo | Baixa | Média | Alta |\n|---|---|---|---|\n${weightTable}`,
+  errors: sectionErrors, response: ref('FpSummary'),
+});
+crud(`${FP}/counts/{countId}/functions`, {
+  tag: T_FP, name: 'FpFunction', label: 'função', plural: 'funções da contagem', schema: fp.functionSchema,
+  filters: fp.functionFilters, errors: sectionErrors,
+  example: { name: 'Clientes', type: 'ilf', det: 12, retFtr: 2 },
+});
+
+// ---------- Scrum ----------
+const T_SC = 'Scrum';
+const SC = '/projects/{projectId}/scrum';
+add('get', SC, {
+  tag: T_SC, summary: 'Visão geral',
+  description: 'Compromissos, papéis, contagens, velocidade das sprints encerradas e a sprint atual com burndown.',
+  errors: anySection, response: ref('ScrumOverview'),
+});
+add('get', `${SC}/settings`, { tag: T_SC, summary: 'Dados gerais do projeto', errors: anySection, response: ref('ScrumSettings') });
+add('patch', `${SC}/settings`, {
+  tag: T_SC, summary: 'Atualizar dados gerais (visão, Meta do Produto, DoR, DoD...)', body: sc.settingsSchema,
+  errors: [...anySection, 400], response: ref('ScrumSettings'),
+  example: { productGoal: 'Agendamento online sem ligações', definitionOfDone: 'Código revisado, testado e publicado' },
+});
+crud(`${SC}/members`, {
+  tag: T_SC, name: 'ScrumMember', label: 'membro', plural: 'membros (PO, SM, desenvolvedores)', schema: sc.memberSchema,
+  errors: anySection, example: { name: 'Ana', role: 'product_owner' },
+});
+crud(`${SC}/items`, {
+  tag: T_SC, name: 'ScrumItem', label: 'item do backlog', plural: 'itens do Product/Sprint Backlog', schema: sc.itemSchema,
+  filters: sc.itemFilters, errors: anySection,
+  example: { code: 'PB-1', title: 'Agendar pelo celular', type: 'story', storyPoints: 5, businessValue: 80 },
+});
+add('post', `${SC}/items/{id}/move`, {
+  tag: T_SC, summary: 'Reordenar o Product Backlog', body: sc.moveSchema, errors: anySection,
+  response: arrayOf(ref('ScrumItem')), example: { position: 0 },
+});
+crud(`${SC}/sprints`, {
+  tag: T_SC, name: 'ScrumSprint', label: 'sprint', plural: 'sprints', schema: sc.sprintSchema, errors: anySection,
+  example: { number: 1, goal: 'Cliente agenda sozinho', startDate: '2026-11-02', endDate: '2026-11-13', status: 'active' },
+});
+add('get', `${SC}/sprints/{id}/detail`, {
+  tag: T_SC, summary: 'Sprint com Sprint Backlog, tasks, eventos, burndown e incremento entregue',
+  description:
+    'Cada task traz `kanbanCardId` quando está publicada no Kanban. `delivered` lista os itens e tasks concluídos ' +
+    '(ordem de conclusão) e os pontos entregues.',
+  errors: anySection, response: { type: 'object' },
+});
+add('post', `${SC}/sprints/{id}/publish-kanban`, {
+  tag: T_SC, summary: 'Publicar as tasks da sprint no Kanban',
+  description:
+    'Cria um cartão para cada task da sprint que ainda não está no quadro (itens do Sprint Backlog sem tasks ganham ' +
+    'uma task com o próprio título). Cada cartão entra na coluna da situação da task (`taskStatus` das colunas); ' +
+    'num quadro vazio são criadas as colunas A fazer, Fazendo e Feito (ou os nomes em `columnNames`). Depois disso, ' +
+    'mover o cartão muda a task e mudar a task move o cartão; tasks concluídas aparecem no incremento entregue.',
+  body: sc.publishKanbanSchema, errors: anySection,
+  response: object({ published: { type: 'integer' }, createdTasks: { type: 'integer' }, sprint: { type: 'object' } }),
+  example: { columnNames: { todo: 'A fazer', in_progress: 'Fazendo', done: 'Feito' } },
+});
+crud(`${SC}/tasks`, {
+  tag: T_SC, name: 'ScrumTask', label: 'task', plural: 'tasks da sprint', schema: sc.taskSchema, filters: sc.taskFilters,
+  errors: anySection, example: { sprintId: '0b0f6d0e-3c1a-4f6e-9d55-1f2a3b4c5d6e', title: 'Tela de horários', estimateHours: 6 },
+});
+crud(`${SC}/events`, {
+  tag: T_SC, name: 'ScrumEvent', label: 'evento', plural: 'eventos (planning, daily, review, retrospectiva, refinamento)',
+  schema: sc.eventSchema, filters: sc.eventFilters, errors: anySection,
+  example: { type: 'retrospective', date: '2026-11-13', wentWell: 'Pareamento', toImprove: 'Estimativas', actionItems: 'Planning poker' },
+});
+
 // ---------- Kanban ----------
 const T_KB = 'Kanban';
 const KB = '/projects/{projectId}/kanban';
@@ -771,8 +883,41 @@ const schemas = {
   CkKnowledge: entity(ck.knowledgeSchema, { projectId: uuid }),
   CkAgent: entity(ck.agentSchema, { projectId: uuid }),
   CkTransaction: entity(ck.transactionSchema, { projectId: uuid }),
+  ContactMessage: object({
+    id: uuid, userId: nullable(uuid), name: { type: 'string' }, email: { type: 'string' }, subject: { type: 'string' },
+    message: { type: 'string' }, status: { type: 'string', enum: ct.CONTACT_STATUS }, ip: nullable({ type: 'string' }),
+    createdAt: dateTime, updatedAt: dateTime,
+  }),
+  FpCount: entity(fp.countSchema, { projectId: uuid, functions: { type: 'integer' }, totalPoints: { type: 'integer' } }),
+  FpFunction: entity(fp.functionSchema, {
+    countId: uuid, complexity: { type: 'string', enum: ['low', 'average', 'high'] }, points: { type: 'integer' },
+  }),
+  FpSummary: object({
+    count: ref('FpCount'),
+    functions: arrayOf(ref('FpFunction')),
+    summary: object({
+      scope: counts, complexity: counts, contribution: { type: 'object' }, dataPoints: { type: 'integer' },
+      transactionPoints: { type: 'integer' }, totalPoints: { type: 'integer' }, byAction: nullable(counts), estimate: { type: 'object' },
+    }),
+  }),
+  ScrumSettings: object({ ...toSchema(sc.settingsSchema, 'output').properties, updatedAt: nullable(dateTime) }),
+  ScrumMember: entity(sc.memberSchema, { projectId: uuid }),
+  ScrumItem: entity(sc.itemSchema, { projectId: uuid, position: { type: 'integer' }, doneAt: nullable(dateTime) }),
+  ScrumSprint: entity(sc.sprintSchema, { projectId: uuid }),
+  ScrumTask: entity(sc.taskSchema, { projectId: uuid, position: { type: 'integer' }, doneAt: nullable(dateTime) }),
+  ScrumEvent: entity(sc.eventSchema, { projectId: uuid }),
+  ScrumOverview: object({
+    settings: ref('ScrumSettings'), roles: counts, counts, eventsByType: counts,
+    velocity: arrayOf(object({ number: { type: 'integer' }, committed: { type: 'integer' }, done: { type: 'integer' } })),
+    averageVelocity: nullable({ type: 'number' }), currentSprint: nullable({ type: 'object' }),
+  }),
   KanbanColumn: entity(kb.columnSchema, { projectId: uuid, position: { type: 'integer' } }),
-  KanbanCard: entity(kb.cardSchema, { projectId: uuid, position: { type: 'integer' } }),
+  KanbanCard: entity(kb.cardSchema, {
+    projectId: uuid, position: { type: 'integer' },
+    // cartões publicados pelo Scrum
+    scrumTaskId: nullable(uuid), taskStatus: nullable({ type: 'string' }), sprintId: nullable(uuid),
+    sprintNumber: nullable({ type: 'integer' }), itemCode: nullable({ type: 'string' }),
+  }),
   KanbanBoard: object({
     columns: arrayOf({ allOf: [ref('KanbanColumn'), object({ cards: arrayOf(ref('KanbanCard')) })] }),
   }),
@@ -826,6 +971,9 @@ export function buildOpenApi() {
       { name: T_ON, description: 'Catálogo de ontologias com métricas, vocabulários, princípios e o arquivo (OWL, RDF, Turtle...). Qualquer tipo de projeto, plano Master.' },
       { name: T_BPM, description: 'Arquitetura de processos com SIPOC e diagnóstico, e diagramas BPMN com upload. Qualquer tipo de projeto, planos Standard e Master.' },
       { name: T_CK, description: 'Planilhas CommonKADS (OM, TM, AM, KM, CM, DM, OTA) e MAS-CommonKADS. Qualquer tipo de projeto, plano Master.' },
+      { name: T_FP, description: 'Contagem IFPUG: funções de dados (ALI/AIE) e de transação (EE/SE/CE), complexidade, PF e estimativas. Projetos `software`, plano Master.' },
+      { name: T_SC, description: 'Scrum: dados gerais, papéis, Product/Sprint Backlog, sprints, tasks e eventos. Qualquer tipo de projeto, planos Standard e Master.' },
+      { name: T_CT, description: 'Formulário de contato (público) e caixa de mensagens do admin.' },
       { name: T_KB, description: 'Quadro de tarefas com colunas e cartões. Qualquer tipo de projeto, todos os planos.' },
     ],
     paths,

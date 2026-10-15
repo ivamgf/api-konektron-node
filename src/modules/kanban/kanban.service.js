@@ -1,24 +1,7 @@
 import { db } from '#database/connection.js';
+import { insertAt, nextPosition, renumber } from '#shared/ordering.js';
+import { scrumKanban } from '#modules/scrum/scrum.kanban.js';
 import { AppError } from '#utils/AppError.js';
-
-// Reescreve as posições na ordem de `ids` (0..n-1), tocando só as linhas que mudaram
-async function renumber(trx, table, rows, ids, extra = {}) {
-  const current = Object.fromEntries(rows.map((r) => [r.id, r]));
-  await Promise.all(
-    ids.map((id, position) => {
-      const row = current[id];
-      const changed = !row || row.position !== position || Object.entries(extra).some(([k, v]) => row[k] !== v);
-      return changed ? trx(table).where({ id }).update({ position, ...extra }) : null;
-    }),
-  );
-}
-
-// Insere `id` em `ids` na posição pedida (acima do fim vai para o fim)
-const insertAt = (ids, id, position) => {
-  const out = ids.filter((x) => x !== id);
-  out.splice(Math.min(position, out.length), 0, id);
-  return out;
-};
 
 // Trava as colunas do projeto: movimentos simultâneos no mesmo quadro ficam em fila
 const lockBoard = (trx, projectId) => trx('kanban_columns').where({ projectId }).forUpdate().select('id');
@@ -27,16 +10,20 @@ export const kanbanService = {
   async board(projectId) {
     const [columns, cards] = await Promise.all([
       db('kanban_columns').where({ projectId }).orderBy([{ column: 'position' }, { column: 'createdAt' }]),
-      db('kanban_cards').where({ projectId }).orderBy([{ column: 'position' }, { column: 'createdAt' }]),
+      // cartões de tasks do Scrum trazem a sprint e o item de origem
+      db('kanban_cards as c')
+        .leftJoin('scrum_tasks as t', 't.id', 'c.scrum_task_id')
+        .leftJoin('scrum_sprints as s', 's.id', 't.sprint_id')
+        .leftJoin('scrum_items as i', 'i.id', 't.item_id')
+        .where('c.project_id', projectId)
+        .orderBy([{ column: 'c.position' }, { column: 'c.created_at' }])
+        .select('c.*', 't.status as task_status', 't.sprint_id', 's.number as sprint_number', 'i.code as item_code'),
     ]);
     const byColumn = Object.groupBy(cards, (c) => c.columnId);
     return { columns: columns.map((c) => ({ ...c, cards: byColumn[c.id] ?? [] })) };
   },
 
-  async nextPosition(trx, table, where) {
-    const row = await trx(table).where(where).max({ max: 'position' }).first();
-    return row?.max == null ? 0 : row.max + 1;
-  },
+  nextPosition,
 
   async assertColumnInProject(trx, projectId, columnId) {
     const column = await trx('kanban_columns').where({ id: columnId, projectId }).first('id');
@@ -69,6 +56,8 @@ export const kanbanService = {
       if (card.columnId !== columnId) {
         const source = await columnCards(card.columnId);
         await renumber(trx, 'kanban_cards', source, source.map((c) => c.id));
+        // cartão de uma task do Scrum: a task assume a situação da coluna
+        await scrumKanban.syncCardMoveToTask(trx, cardId, columnId);
       }
     });
     return this.board(projectId);

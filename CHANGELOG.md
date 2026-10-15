@@ -1,5 +1,44 @@
 # Changelog
 
+## 4.2.0 — 2026-10-16
+
+### Adicionado
+- **Scrum ↔ Kanban**: `POST /projects/:projectId/scrum/sprints/:id/publish-kanban` publica no Kanban as tasks
+  da sprint que ainda não estão lá (itens do Sprint Backlog sem tasks ganham uma task). Os cartões trazem
+  responsável, prazo (fim da sprint), sprint e item de origem.
+- Colunas do Kanban com `taskStatus` (`todo`, `in_progress`, `done`): mover o cartão de uma task para uma
+  coluna marcada muda a task; mudar a task no Scrum move o cartão. Quadro vazio ganha as três colunas
+  (nomes no idioma de quem publica); quadro sem marcação é marcado pela ordem.
+- Título e descrição sincronizados entre task e cartão; excluir a task exclui o cartão.
+- O item do backlog acompanha as suas tasks (todas concluídas → item concluído; alguma reaberta → em
+  andamento), o que alimenta o burndown, a velocidade e o incremento.
+- `GET /sprints/:id/detail` traz `delivered` (itens e tasks concluídos, pontos entregues) e o `kanbanCardId`
+  de cada task.
+- `crudRouter` aceita `afterWrite`. Migration 000019, OpenAPI, README e testes.
+
+## 4.1.0 — 2026-10-15
+
+### Adicionado
+- **Formulário de contato** (`POST /contact`, público; com token válido a mensagem fica ligada ao usuário): nome,
+  e-mail, assunto e mensagem, com limite de 5 envios a cada 15 minutos e campo-armadilha anti-robô. As mensagens
+  ficam no banco e, com `CONTACT_EMAIL` definido, também são enviadas por e-mail (com `Reply-To` do remetente).
+  Caixa do admin em `/admin/contact-messages` (lista paginada com contagem por situação, mudar situação, excluir).
+- Seção **Pontos de Função** (`/projects/:projectId/function-points`, projetos `software`, plano Master): contagens
+  IFPUG por tipo (projeto de desenvolvimento, de melhoria ou aplicação), com escopo e fronteira, e funções de dados
+  (ALI/AIE) e de transação (EE/SE/CE). Complexidade e PF são calculados pela API a partir de TD e TR/ALR (tabelas de
+  complexidade e contribuição do IFPUG). O resumo traz as tabelas das planilhas (determinação do escopo,
+  complexidade, contribuição), PF de dados e de transação, PF por ação (melhoria) e estimativa de esforço e custo.
+- Seção **Scrum** (`/projects/:projectId/scrum`, qualquer tipo de projeto, planos Standard e Master): dados gerais
+  (visão, Meta do Produto, Definição de Preparado e de Pronto, duração da sprint, acordos), papéis (Product Owner,
+  Scrum Master, Developers, stakeholders), Product Backlog ordenável, Sprint Backlog, sprints com meta, tasks e
+  incremento, eventos (planning, daily com atualizações por membro, review, retrospectiva, refinamento), burndown
+  e velocidade.
+- `shared/ordering.js`: ordenação manual por posição, agora usada pelo Kanban e pelo Product Backlog.
+- Migrations 000016 a 000018; rotas documentadas no OpenAPI.
+
+### Configuração
+- Nova variável opcional `CONTACT_EMAIL` (vazia: as mensagens só ficam no banco).
+
 ## 4.0.0 — 2026-10-14
 
 ### Removido (incompatível)
