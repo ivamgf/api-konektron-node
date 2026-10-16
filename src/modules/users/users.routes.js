@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '#middlewares/authenticate.js';
-import { requireRole } from '#middlewares/authorize.js';
+import { requireMasterAdmin } from '#middlewares/authorize.js';
 import { validate } from '#middlewares/validate.js';
 import { audit } from '#services/auditLog.js';
 import { idParams } from '#shared/schemas.js';
@@ -8,7 +8,7 @@ import { adminUpdateSchema, listQuery } from './users.schemas.js';
 import { usersService as s } from './users.service.js';
 
 const router = Router();
-router.use(authenticate, requireRole('admin'));
+router.use(authenticate, requireMasterAdmin);
 
 router.get('/', validate({ query: listQuery }), async (req, res) =>
   res.json(await s.list(req.validated.query)),

@@ -1,4 +1,5 @@
 import { db } from '#database/connection.js';
+import { isMasterAdmin } from '#config/plans.js';
 import { AppError } from '#utils/AppError.js';
 
 const COLUMNS = ['id', 'email', 'role', 'plan', 'isActive', 'emailVerifiedAt', 'lastLoginAt', 'createdAt'];
@@ -46,12 +47,16 @@ export const usersService = {
 
   async update(id, data, actorId) {
     if (!Object.keys(data).length) throw new AppError('Nenhum campo para atualizar', 400);
-    if (id === actorId && (data.role || data.isActive === false)) {
-      throw new AppError('Você não pode alterar o próprio papel ou desativar a própria conta', 400);
+    // o administrador não pode tirar o próprio acesso à administração (papel, plano Master ou conta ativa)
+    if (id === actorId && (data.role || data.plan || data.isActive === false)) {
+      throw new AppError('Você não pode alterar o próprio perfil ou desativar a própria conta', 400);
     }
+    const before = await active().where({ id }).first('role', 'plan');
+    if (!before) throw AppError.notFound('Usuário');
     const [user] = await active().where({ id }).update(data).returning(COLUMNS);
     if (!user) throw AppError.notFound('Usuário');
-    if (data.isActive === false) await revokeSessions(id);
+    // o perfil novo chega ao token na próxima renovação; quem perdeu a administração (ou foi desativado) sai na hora
+    if (data.isActive === false || (isMasterAdmin(before) && !isMasterAdmin(user))) await revokeSessions(id);
     return user;
   },
 

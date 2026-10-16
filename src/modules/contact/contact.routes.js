@@ -3,9 +3,10 @@ import rateLimit from 'express-rate-limit';
 import { env } from '#config/env.js';
 import { db } from '#database/connection.js';
 import { authenticate, optionalAuth } from '#middlewares/authenticate.js';
-import { requireRole } from '#middlewares/authorize.js';
+import { requireMasterAdmin } from '#middlewares/authorize.js';
 import { validate } from '#middlewares/validate.js';
-import { mailTemplates, sendMail } from '#services/mailer.js';
+import { audit } from '#services/auditLog.js';
+import { mailEnabled, mailTemplates, sendMail } from '#services/mailer.js';
 import { idParams } from '#shared/schemas.js';
 import { AppError } from '#utils/AppError.js';
 import { logger } from '#utils/logger.js';
@@ -42,7 +43,7 @@ contactRouter.post('/', limiter, optionalAuth, validate({ body: s.contactSchema 
 });
 
 export const contactAdminRouter = Router();
-contactAdminRouter.use(authenticate, requireRole('admin'));
+contactAdminRouter.use(authenticate, requireMasterAdmin);
 
 contactAdminRouter.get('/', validate({ query: s.contactListQuery }), async (req, res) => {
   const { page, pageSize, status } = req.validated.query;
@@ -65,6 +66,28 @@ contactAdminRouter.get('/', validate({ query: s.contactListQuery }), async (req,
 contactAdminRouter.patch('/:id', validate({ params: idParams, body: s.contactUpdateSchema }), async (req, res) => {
   const [row] = await db('contact_messages').where({ id: req.validated.params.id }).update(req.validated.body).returning('*');
   if (!row) throw AppError.notFound('Mensagem');
+  res.json(row);
+});
+
+// Responde pela plataforma: o e-mail sai do SMTP do sistema para o remetente e a resposta fica registrada
+contactAdminRouter.post('/:id/reply', validate({ params: idParams, body: s.contactReplySchema }), async (req, res) => {
+  const msg = await db('contact_messages').where({ id: req.validated.params.id }).first();
+  if (!msg) throw AppError.notFound('Mensagem');
+  if (!mailEnabled()) throw new AppError('Envio de e-mail não configurado (SMTP_HOST vazio)', 503);
+
+  const reply = req.validated.body.message;
+  try {
+    await sendMail({ to: msg.email, replyTo: env.CONTACT_EMAIL, ...mailTemplates.contactReply(msg, reply) });
+  } catch (err) {
+    // ex.: senha do SMTP errada (535); a mensagem continua sem resposta
+    logger.error({ err, contactId: msg.id }, 'Falha ao enviar a resposta do contato');
+    throw new AppError(`O servidor de e-mail recusou o envio: ${err.response ?? err.message}`, 502);
+  }
+  const [row] = await db('contact_messages')
+    .where({ id: msg.id })
+    .update({ status: 'answered', reply, repliedAt: db.fn.now(), repliedBy: req.user.id })
+    .returning('*');
+  await audit({ userId: req.user.id, action: 'admin.contact_reply', description: `${msg.id} → ${msg.email}`, req });
   res.json(row);
 });
 

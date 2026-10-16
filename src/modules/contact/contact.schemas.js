@@ -19,3 +19,6 @@ export const contactListQuery = z.object({
 });
 
 export const contactUpdateSchema = z.object({ status: z.enum(CONTACT_STATUS) });
+
+// Resposta do admin, enviada por e-mail ao remetente
+export const contactReplySchema = z.object({ message: z.string().trim().min(2).max(10000) });

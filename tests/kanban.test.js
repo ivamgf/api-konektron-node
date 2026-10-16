@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { canAccessSection, IMPLEMENTED_SECTIONS, PLAN_SECTIONS, SECTIONS } from '#config/plans.js';
+import { canAccessSection, IMPLEMENTED_SECTIONS, PLANS, SECTIONS } from '#config/plans.js';
 import {
   cardSchema,
   cardUpdateSchema,
@@ -13,7 +13,7 @@ const columnId = '0b0f6d0e-3c1a-4f6e-9d55-1f2a3b4c5d6e';
 
 test('Kanban está implementado e em todos os planos', () => {
   assert.ok(IMPLEMENTED_SECTIONS.includes(SECTIONS.KANBAN));
-  for (const plan of Object.keys(PLAN_SECTIONS)) {
+  for (const plan of Object.values(PLANS)) {
     assert.ok(canAccessSection({ role: 'client', plan }, SECTIONS.KANBAN), plan);
   }
 });

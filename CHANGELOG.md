@@ -1,5 +1,61 @@
 # Changelog
 
+## 5.0.0 — 2026-10-16
+
+### Adicionado
+- `POST /admin/contact-messages/:id/reply`: o administrador responde à mensagem de contato pela plataforma. O e-mail
+  sai pelo SMTP do sistema para o remetente, citando a mensagem original e com resposta para `CONTACT_EMAIL`.
+  Só marca como respondida (`reply`, `repliedAt`, `repliedBy`, migration 000022) se o envio der certo; se o
+  servidor de e-mail recusar, devolve 502 com o motivo, e 503 quando não há SMTP configurado.
+
+### Removido
+- **Integração com o PagBank desfeita**: rotas `/billing/*` (planos, checkout, assinatura, cancelamento,
+  webhook) e `/admin/subscriptions`, o serviço `pagbank.js`, o script `pagbank:webhook`, a rotina horária de
+  fim de acesso, as variáveis `PAGBANK_ENV`, `PAGBANK_TOKEN`, `PLAN_PRICE_STANDARD`, `PLAN_PRICE_MASTER` e os
+  logs de homologação do sandbox.
+- Migration 000021: apaga as tabelas `subscriptions` e `payment_events`, deixa todos os usuários no plano Free
+  e com papel `client`, exceto o dono do sistema (administrador com plano Master).
+
+### Alterado
+- **Todas as seções liberadas em todos os planos**, inclusive o Free (antes o Free tinha só Análise de Sistemas
+  e Kanban). Os planos `free`, `standard` e `master` e os papéis continuam distintos no cadastro; todo cadastro
+  novo começa `client`/`free` e o perfil é mudado pelo administrador em `PATCH /admin/users/:id`.
+- **Administração só para administrador com plano Master** (`requireMasterAdmin`): usuários, logs, mensagens de
+  contato e acesso a projetos de outros usuários. A checagem relê o banco a cada requisição, então um
+  rebaixamento vale na hora; quem perde a administração tem as sessões encerradas.
+- O administrador não pode mudar o próprio papel nem o próprio plano (perderia o acesso).
+- OpenAPI e README sem planos pagos; seção "Perfis" explica a regra de acesso.
+
+## 4.3.0 — 2026-10-16
+
+### Adicionado
+- **Assinaturas pelo PagBank (Checkout Recorrente)**: `POST /billing/checkout` cria um checkout com
+  `recurrence_plan` mensal (só cartão de crédito, sem fim) e devolve o `payUrl` da página de pagamento do
+  PagBank; a volta é `APP_URL/billing/return?ref={id}`. Um checkout aberto do mesmo plano é reaproveitado.
+- `GET /billing/plans` (público), `GET /billing/subscription`, `POST /billing/subscriptions/:id/refresh`
+  (confere no PagBank sem esperar o webhook), `POST /billing/subscription/cancel` e `GET /admin/subscriptions`.
+- Webhook `POST /billing/webhooks/pagbank`: avisos de pedido, checkout e `subscription.*`; confere o
+  `x-authenticity-token` e sempre relê o estado na API do PagBank antes de mudar o plano do usuário.
+- O plano do usuário segue a assinatura (`active`/`trial`/`overdue`/`pending_action` liberam;
+  `suspended`/`canceled`/`expired` voltam ao Free). Trocar de plano cancela a assinatura anterior;
+  excluir a conta cancela as assinaturas no PagBank.
+- Migration 000020 (`subscriptions`, `payment_events`), variáveis `PAGBANK_ENV`, `PAGBANK_TOKEN`,
+  `PLAN_PRICE_STANDARD`, `PLAN_PRICE_MASTER`, script `npm run pagbank:webhook`, OpenAPI, README e testes.
+- Aceite obrigatório dos termos e da cobrança recorrente no checkout (`acceptTerms`, `terms_accepted_at`).
+- Cancelamento conforme o CDC: em até 7 dias do 1º pagamento, estorno integral automático pelo PagBank
+  (arrependimento, art. 49); depois, a cobrança para e o plano segue até o fim do período pago (`access_until`),
+  com rotina horária que devolve ao Free.
+- `npm run mail:test` (confere o SMTP e envia um e-mail de teste); contato da API: konektron@orkneytech-lab.com.
+- Logs de depuração das chamadas ao PagBank (`LOG_LEVEL=debug`) e logs do sandbox para a homologação.
+
+### Corrigido (testes no sandbox do PagBank)
+- 1º pagamento recusado vira assinatura `OVERDUE`: agora não libera o plano (atraso só mantém o acesso de quem
+  já pagou).
+- Busca de assinaturas na volta do checkout: o PagBank exige `created_at_end` junto de `created_at_start`;
+  janela de datas com folga para o fuso de Brasília.
+- URLs locais no checkout eram bloqueadas pelo firewall do PagBank (403); só URLs públicas são enviadas.
+- Aviso de recurso inexistente no PagBank responde 200 (antes 502, o que faria o PagBank reenviar sem parar).
+
 ## 4.2.0 — 2026-10-16
 
 ### Adicionado

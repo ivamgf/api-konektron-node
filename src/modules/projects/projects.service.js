@@ -1,5 +1,4 @@
 import { db } from '#database/connection.js';
-import { canAccessSection, SECTIONS } from '#config/plans.js';
 import { AppError } from '#utils/AppError.js';
 import { crispdmService } from '#modules/crisp-dm/crispdm.service.js';
 import { systemAnalysisService } from '#modules/system-analysis/systemAnalysis.service.js';
@@ -16,9 +15,6 @@ export const projectsService = {
   },
 
   async create(user, { type = 'software', ...data }) {
-    if (type === 'data_analysis' && !canAccessSection(user, SECTIONS.CRISP_DM)) {
-      throw new AppError('Seu plano não inclui projetos de análise de dados (CRISP-DM)', 403);
-    }
     return db.transaction(async (trx) => {
       const [project] = await trx('projects').insert({ ...data, type, ownerId: user.id }).returning('*');
       if (type === 'software') await systemAnalysisService.initAnalysis(trx, project.id);

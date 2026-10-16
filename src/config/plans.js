@@ -1,4 +1,5 @@
-// Planos do KonekTron (seção 1.2 da especificação, atualizada com CRISP-DM e Kanban)
+// Perfis do KonekTron. Os planos continuam distintos no cadastro, mas todos dão acesso a todas as seções;
+// quem muda o plano de um usuário é o administrador, no painel (todo cadastro novo começa Free).
 export const PLANS = Object.freeze({ FREE: 'free', STANDARD: 'standard', MASTER: 'master' });
 export const ROLES = Object.freeze({ CLIENT: 'client', ADMIN: 'admin', PROVIDER: 'provider' });
 
@@ -26,14 +27,10 @@ export const SECTION_PROJECT_TYPE = Object.freeze({
   [SECTIONS.CRISP_DM]: 'data_analysis',
 });
 
-// Kanban faz parte de todos os planos
-export const PLAN_SECTIONS = Object.freeze({
-  [PLANS.FREE]: [SECTIONS.SYSTEM_ANALYSIS, SECTIONS.KANBAN],
-  [PLANS.STANDARD]: [SECTIONS.SYSTEM_ANALYSIS, SECTIONS.BPM, SECTIONS.CRISP_DM, SECTIONS.SCRUM, SECTIONS.KANBAN],
-  [PLANS.MASTER]: Object.values(SECTIONS),
-});
-
+// Todos os planos (inclusive o Free) acessam todas as seções
 export function canAccessSection(user, section) {
-  if (user?.role === ROLES.ADMIN) return true;
-  return (PLAN_SECTIONS[user?.plan] ?? []).includes(section);
+  return Boolean(user) && Object.values(SECTIONS).includes(section);
 }
+
+// Administração (usuários, mensagens, logs, projetos de terceiros): só administrador com plano Master
+export const isMasterAdmin = (user) => user?.role === ROLES.ADMIN && user?.plan === PLANS.MASTER;

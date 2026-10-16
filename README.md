@@ -9,7 +9,7 @@ Node.js 24 · Express 5 · PostgreSQL (Knex) · Zod 4 · JWT.
 src/
 ├── server.js · app.js · routes.js
 ├── docs/          openapi.js (especificação gerada dos schemas Zod), página Swagger UI
-├── config/        env.js (validação do .env), plans.js (planos e seções)
+├── config/        env.js (validação do .env), plans.js (perfis e seções)
 ├── database/      connection.js, helpers.js, migrations/, seeds/
 ├── middlewares/   authenticate, authorize, validate, loadProject, errorHandler
 ├── services/      mailer (SMTP), auditLog
@@ -82,8 +82,8 @@ código. **Ao criar uma rota, registre-a lá**. Os exemplos são validados contr
 | POST | /auth/change-password · /auth/resend-verification | logado | RF1/RF4 |
 | GET · PATCH | /profiles/me | logado | RF3 |
 | CRUD | /addresses | logado | RF3 |
-| GET · PATCH · DELETE | /admin/users[/:id] | admin | RF5 |
-| GET | /admin/logs · /admin/logs/summary | admin | RF5 |
+| GET · PATCH · DELETE | /admin/users[/:id] | admin Master | RF5 |
+| GET | /admin/logs · /admin/logs/summary | admin Master | RF5 |
 
 ### Projetos e engenharia
 
@@ -91,11 +91,11 @@ código. **Ao criar uma rota, registre-a lá**. Os exemplos são validados contr
 |---|---|---|
 | GET · POST | /projects | `type`: `software` (padrão) ou `data_analysis` |
 | GET · PATCH · DELETE | /projects/:projectId | o tipo não muda após criado |
-| GET | /engineering/sections | seções, se estão liberadas pelo plano e implementadas |
+| GET | /engineering/sections | seções, se estão liberadas (todas) e implementadas |
 
 ### Análise de Sistemas — `/projects/:projectId/system-analysis`
 
-Disponível em todos os planos, para projetos `software`.
+Projetos `software`.
 
 | Método | Rota | Observação |
 |---|---|---|
@@ -108,7 +108,7 @@ Disponível em todos os planos, para projetos `software`.
 
 ### CRISP-DM — `/projects/:projectId/crisp-dm`
 
-Exige plano Standard/Master e projeto `data_analysis`. As 6 fases são criadas
+Exige projeto `data_analysis`. As 6 fases são criadas
 automaticamente com o projeto.
 
 | Método | Rota | Fase |
@@ -125,7 +125,7 @@ automaticamente com o projeto.
 
 ### Ontologias — `/projects/:projectId/ontologies`
 
-Plano Master, qualquer tipo de projeto (migration 000013). A raiz é a própria coleção.
+Qualquer tipo de projeto (migration 000013). A raiz é a própria coleção.
 
 | Método | Rota | Observação |
 |---|---|---|
@@ -139,7 +139,7 @@ indivíduos. Só preenche o que está vazio; a leitura completa volta em `analys
 
 ### BPM — `/projects/:projectId/bpm`
 
-Planos Standard e Master, qualquer tipo de projeto (migration 000014).
+Qualquer tipo de projeto (migration 000014).
 
 | Método | Rota | Observação |
 |---|---|---|
@@ -150,7 +150,7 @@ Planos Standard e Master, qualquer tipo de projeto (migration 000014).
 
 ### CommonKADS — `/projects/:projectId/commonkads`
 
-Plano Master, qualquer tipo de projeto (migration 000015). As 17 planilhas do CommonKADS e da
+Qualquer tipo de projeto (migration 000015). As 17 planilhas do CommonKADS e da
 extensão MAS-CommonKADS: as de texto livre guardam o conteúdo na própria planilha; as em linhas
 são cadastros (OM-3/TM-1 → tarefas, OM-4/TM-2 → conhecimento, AM-1/MAS → agentes, CM-1/CM-2 →
 transações). Os vínculos são guardados uma vez só e o relatório os resolve nos dois sentidos.
@@ -180,7 +180,7 @@ curl -X PUT $API/projects/$ID/ontologies/$ONTO/file \
 
 ### Pontos de Função — `/projects/:projectId/function-points`
 
-Plano Master, projetos `software` (migration 000017). Contagem IFPUG: a API calcula a complexidade
+Projetos `software` (migration 000017). Contagem IFPUG: a API calcula a complexidade
 (matriz TR × TD para ALI/AIE, ALR × TD para EE/SE/CE) e os PF de cada função na gravação.
 
 | Método | Rota | Observação |
@@ -192,7 +192,7 @@ Plano Master, projetos `software` (migration 000017). Contagem IFPUG: a API calc
 
 ### Scrum — `/projects/:projectId/scrum`
 
-Planos Standard e Master, qualquer tipo de projeto (migration 000018), segundo o Guia do Scrum 2020.
+Qualquer tipo de projeto (migration 000018), segundo o Guia do Scrum 2020.
 
 | Método | Rota | Observação |
 |---|---|---|
@@ -224,9 +224,20 @@ sem nenhuma marcação é marcado pela ordem (1ª, 2ª e última). Depois disso:
 fica no banco (migration 000016) e, com `CONTACT_EMAIL` definido, também vai por e-mail. O admin lista
 (`?status=&page=`), muda a situação (`new`, `read`, `answered`, `archived`) e exclui em `/admin/contact-messages`.
 
+Teste do e-mail: `npm run mail:test [-- destino]` confere o SMTP e envia uma mensagem de teste (padrão: `CONTACT_EMAIL`).
+
+### Perfis e administração
+
+Não há cobrança: todos os planos (`free`, `standard`, `master`) acessam todas as seções, e todo cadastro novo
+começa `client`/`free`. Os perfis continuam distintos no banco; quem os muda é o administrador, em
+`PATCH /admin/users/:id` (`role`, `plan`). As rotas `/admin/*` (usuários, logs, mensagens) e o acesso a
+projetos de outros usuários são exclusivos de quem tem papel `admin` **e** plano `master`; o middleware
+`requireMasterAdmin` confere isso no banco a cada requisição, então um rebaixamento vale na hora. A migration
+000021 removeu as tabelas da antiga integração com o PagBank e deixou todos como Free, exceto o dono do sistema.
+
 ### Kanban — `/projects/:projectId/kanban`
 
-Disponível em todos os planos, para qualquer tipo de projeto (migration 000010).
+Qualquer tipo de projeto (migration 000010).
 
 | Método | Rota | Observação |
 |---|---|---|

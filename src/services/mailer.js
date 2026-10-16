@@ -11,9 +11,17 @@ const transporter = env.SMTP_HOST
     })
   : null;
 
+// Titan, Gmail etc. recusam o login sem senha: avisa já na inicialização, não só quando um e-mail falha
+if (transporter && env.SMTP_USER && !env.SMTP_PASSWORD && !env.isTest) {
+  logger.warn({ host: env.SMTP_HOST, user: env.SMTP_USER }, 'SMTP_PASSWORD vazio: o envio de e-mails vai falhar (rode npm run mail:test)');
+}
+
 // Texto vindo do usuário dentro de um e-mail HTML
 export const escapeHtml = (value) =>
   String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+// Sem SMTP os e-mails só vão para o log: quem precisa garantir a entrega (ex.: resposta ao contato) confere antes
+export const mailEnabled = () => Boolean(transporter);
 
 export async function sendMail({ to, subject, html, replyTo }) {
   if (!transporter) {
@@ -33,6 +41,15 @@ export const mailTemplates = {
     html:
       `<p><strong>${escapeHtml(name)}</strong> &lt;${escapeHtml(email)}&gt; escreveu pelo formulário de contato:</p>` +
       `<p><strong>${escapeHtml(subject)}</strong></p><p style="white-space:pre-wrap">${escapeHtml(message)}</p>`,
+  }),
+  // Resposta da equipe a uma mensagem de contato, citando a mensagem original
+  contactReply: ({ name, subject, message, createdAt }, reply) => ({
+    subject: `Re: ${subject}`,
+    html:
+      `<p>Olá, ${escapeHtml(name)}!</p><p style="white-space:pre-wrap">${escapeHtml(reply)}</p>` +
+      '<p>Equipe KonekTron</p><hr>' +
+      `<p style="color:#666">Em ${new Date(createdAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}, você escreveu:</p>` +
+      `<blockquote style="color:#666;white-space:pre-wrap;border-left:3px solid #ccc;margin:0;padding-left:12px">${escapeHtml(message)}</blockquote>`,
   }),
   resetPassword: (link) => ({
     subject: 'KonekTron — Recuperação de senha',
