@@ -1,6 +1,6 @@
 {
   "name": "konektron-api",
-  "version": "4.2.0",
+  "version": "4.3.0",
   "description": "API do sistema KonekTron - Engenharia de Software e Análise de Dados",
   "type": "module",
   "license": "MIT",
@@ -26,6 +26,8 @@
     "migrate:make": "knex migrate:make",
     "db:check": "node scripts/db-check.js",
     "db:tunnel": "node scripts/db-tunnel.js",
+    "pagbank:webhook": "node scripts/pagbank-webhook.js",
+    "mail:test": "node scripts/mail-check.js",
     "seed": "knex seed:run",
     "db:reset": "knex migrate:rollback --all && knex migrate:latest && knex seed:run",
     "lint": "eslint .",

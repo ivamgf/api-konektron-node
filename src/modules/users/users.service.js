@@ -1,5 +1,6 @@
 import { db } from '#database/connection.js';
 import { AppError } from '#utils/AppError.js';
+import { billingService } from '#modules/billing/billing.service.js';
 
 const COLUMNS = ['id', 'email', 'role', 'plan', 'isActive', 'emailVerifiedAt', 'lastLoginAt', 'createdAt'];
 const active = () => db('users').whereNull('deletedAt');
@@ -10,6 +11,8 @@ export const usersService = {
   // Soft delete: o registro fica para o histórico (audit_logs), mas os dados de login são
   // anonimizados para liberar o e-mail (único) para um novo cadastro.
   async softDelete(id) {
+    // a mensalidade não pode continuar sendo cobrada de uma conta excluída
+    await billingService.cancelAllForUser(id);
     const n = await active()
       .where({ id })
       .update({

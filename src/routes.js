@@ -11,6 +11,7 @@ import logRoutes from '#modules/logs/logs.routes.js';
 import projectRoutes from '#modules/projects/projects.routes.js';
 import engineeringRoutes from '#modules/engineering/engineering.routes.js';
 import { contactAdminRouter, contactRouter } from '#modules/contact/contact.routes.js';
+import billingRoutes, { billingAdminRouter } from '#modules/billing/billing.routes.js';
 
 const router = Router();
 const docsEnabled = env.DOCS_ENABLED === 'true';
@@ -42,7 +43,9 @@ router.use('/addresses', addressRoutes);
 router.use('/admin/users', userRoutes);
 router.use('/admin/logs', logRoutes);
 router.use('/admin/contact-messages', contactAdminRouter);
+router.use('/admin/subscriptions', billingAdminRouter);
 router.use('/contact', contactRouter);
+router.use('/billing', billingRoutes);
 router.use('/projects', projectRoutes);
 router.use('/engineering', engineeringRoutes);
 if (docsEnabled) router.use('/docs', docsRoutes);

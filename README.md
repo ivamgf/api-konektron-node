@@ -31,6 +31,7 @@ src/
     ├── scrum/        papéis, backlogs, sprints, tasks e eventos (qualquer projeto)
     ├── kanban/       quadro de tarefas (qualquer projeto)
     ├── contact/      formulário de contato e caixa de mensagens do admin
+    ├── billing/      assinaturas mensais pelo Checkout Recorrente do PagBank
     └── engineering/  RF6 — catálogo de seções (as não implementadas respondem 501)
 ```
 
@@ -223,6 +224,47 @@ sem nenhuma marcação é marcado pela ordem (1ª, 2ª e última). Depois disso:
 `POST /contact` é público (5 envios a cada 15 minutos): `name`, `email`, `subject`, `message`. A mensagem
 fica no banco (migration 000016) e, com `CONTACT_EMAIL` definido, também vai por e-mail. O admin lista
 (`?status=&page=`), muda a situação (`new`, `read`, `answered`, `archived`) e exclui em `/admin/contact-messages`.
+
+### Assinaturas (PagBank) — `/billing` e `/admin/subscriptions`
+
+Os planos Standard e Master são vendidos por mensalidade no cartão de crédito, pelo **Checkout Recorrente**
+do PagBank: o usuário escolhe o plano, a API cria um checkout com `recurrence_plan` mensal e o app o
+redireciona para a página de pagamento do PagBank. O 1º pagamento cria a assinatura no PagBank, que cobra
+os meses seguintes sozinho.
+
+| Rota | O que faz |
+| --- | --- |
+| `GET /billing/plans` (pública) | planos com preço (`PLAN_PRICE_STANDARD`, `PLAN_PRICE_MASTER`, em centavos) |
+| `POST /billing/checkout` `{ plan }` | cria (ou reaproveita) o checkout e devolve `payUrl` |
+| `POST /billing/subscriptions/:id/refresh` | volta do checkout: confere no PagBank sem esperar o webhook |
+| `GET /billing/subscription` | assinatura atual e histórico |
+| `POST /billing/subscription/cancel` | cancela no PagBank e volta ao Free na hora |
+| `POST /billing/webhooks/pagbank` (pública) | avisos de pagamento, checkout e assinatura |
+| `GET /admin/subscriptions` | todas as assinaturas (admin) |
+
+- **Plano do usuário**: `active` e `trial` liberam o plano; `overdue` e `pending_action` só mantêm o acesso de
+  quem já pagou ao menos uma vez (no sandbox, o 1º pagamento recusado cria a assinatura já em `OVERDUE`);
+  `suspended`, `canceled` e `expired` voltam ao Free. A mudança chega ao token na próxima renovação (o app
+  renova ao voltar do pagamento).
+- **Aceite**: `POST /billing/checkout` exige `acceptTerms: true` (termos e cobrança recorrente), gravado em
+  `terms_accepted_at` e no log de auditoria.
+- **Cancelamento**: até 7 dias do 1º pagamento vale o direito de arrependimento (CDC art. 49): estorno integral
+  pela API do PagBank (`/payments/{id}/refunds`) e fim do acesso. Depois, a cobrança para e o plano segue até o
+  fim do período pago (`access_until`); uma rotina horária no `server.js` devolve ao Free quando o prazo vence.
+- **Troca de plano**: a assinatura nova, quando ativa, cancela a anterior no PagBank. Excluir a conta cancela tudo.
+- **Webhook**: o corpo é só um aviso; o estado é sempre relido na API do PagBank com o nosso token. Com
+  `x-authenticity-token`, a API confere `sha256("{PAGBANK_TOKEN}-{corpo}")` e recusa (401) se não bater.
+  As notificações ficam em `payment_events` (migration 000020).
+- **Configuração**: `PAGBANK_ENV` (`sandbox` | `production`), `PAGBANK_TOKEN` e os preços. Os avisos de
+  pagamento e checkout vão na criação do checkout (só com `API_URL` pública em HTTPS); os de assinatura são
+  uma preferência da conta: rode `npm run pagbank:webhook` uma vez por ambiente (`-- --show` só mostra).
+- **URLs públicas**: o firewall do PagBank recusa (403, página HTML) checkouts com `localhost` ou IP interno nas
+  URLs. Com `APP_URL`/`API_URL` locais, a API cria o checkout sem URL de retorno/notificação.
+- **Requisitos do PagBank**: a API de Pagamentos Recorrentes exige conta **PJ**; produção só depois do
+  [formulário de homologação](https://app.pipefy.com/public/form/2e56YZLK). Teste antes no sandbox. Com
+  `LOG_LEVEL=debug` a API registra requisição e resposta de cada chamada ao PagBank (sem o token); os logs
+  dos testes no sandbox estão em `docs/homologacao-pagbank/sandbox-logs.json`.
+- **E-mail**: `npm run mail:test [-- destino]` confere o SMTP e envia uma mensagem de teste (padrão: `CONTACT_EMAIL`).
 
 ### Kanban — `/projects/:projectId/kanban`
 

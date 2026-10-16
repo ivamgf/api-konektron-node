@@ -1,5 +1,35 @@
 # Changelog
 
+## 4.3.0 — 2026-10-16
+
+### Adicionado
+- **Assinaturas pelo PagBank (Checkout Recorrente)**: `POST /billing/checkout` cria um checkout com
+  `recurrence_plan` mensal (só cartão de crédito, sem fim) e devolve o `payUrl` da página de pagamento do
+  PagBank; a volta é `APP_URL/billing/return?ref={id}`. Um checkout aberto do mesmo plano é reaproveitado.
+- `GET /billing/plans` (público), `GET /billing/subscription`, `POST /billing/subscriptions/:id/refresh`
+  (confere no PagBank sem esperar o webhook), `POST /billing/subscription/cancel` e `GET /admin/subscriptions`.
+- Webhook `POST /billing/webhooks/pagbank`: avisos de pedido, checkout e `subscription.*`; confere o
+  `x-authenticity-token` e sempre relê o estado na API do PagBank antes de mudar o plano do usuário.
+- O plano do usuário segue a assinatura (`active`/`trial`/`overdue`/`pending_action` liberam;
+  `suspended`/`canceled`/`expired` voltam ao Free). Trocar de plano cancela a assinatura anterior;
+  excluir a conta cancela as assinaturas no PagBank.
+- Migration 000020 (`subscriptions`, `payment_events`), variáveis `PAGBANK_ENV`, `PAGBANK_TOKEN`,
+  `PLAN_PRICE_STANDARD`, `PLAN_PRICE_MASTER`, script `npm run pagbank:webhook`, OpenAPI, README e testes.
+- Aceite obrigatório dos termos e da cobrança recorrente no checkout (`acceptTerms`, `terms_accepted_at`).
+- Cancelamento conforme o CDC: em até 7 dias do 1º pagamento, estorno integral automático pelo PagBank
+  (arrependimento, art. 49); depois, a cobrança para e o plano segue até o fim do período pago (`access_until`),
+  com rotina horária que devolve ao Free.
+- `npm run mail:test` (confere o SMTP e envia um e-mail de teste); contato da API: konektron@orkneytech-lab.com.
+- Logs de depuração das chamadas ao PagBank (`LOG_LEVEL=debug`) e logs do sandbox para a homologação.
+
+### Corrigido (testes no sandbox do PagBank)
+- 1º pagamento recusado vira assinatura `OVERDUE`: agora não libera o plano (atraso só mantém o acesso de quem
+  já pagou).
+- Busca de assinaturas na volta do checkout: o PagBank exige `created_at_end` junto de `created_at_start`;
+  janela de datas com folga para o fuso de Brasília.
+- URLs locais no checkout eram bloqueadas pelo firewall do PagBank (403); só URLs públicas são enviadas.
+- Aviso de recurso inexistente no PagBank responde 200 (antes 502, o que faria o PagBank reenviar sem parar).
+
 ## 4.2.0 — 2026-10-16
 
 ### Adicionado

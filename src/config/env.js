@@ -39,6 +39,12 @@ const schema = z
     MAIL_FROM: z.string().optional(),
     // destino das mensagens do formulário de contato (vazio: as mensagens só ficam no banco)
     CONTACT_EMAIL: z.preprocess((v) => (typeof v === 'string' && !v.trim() ? undefined : v), z.email().optional()),
+    // PagBank: assinaturas pelo Checkout Recorrente (sem token, a cobrança fica desligada)
+    PAGBANK_ENV: z.enum(['sandbox', 'production']).default('sandbox'),
+    PAGBANK_TOKEN: z.preprocess((v) => (typeof v === 'string' && !v.trim() ? undefined : v), z.string().trim().optional()),
+    // mensalidade de cada plano pago, em centavos (ex.: 4990 = R$ 49,90); vazio = plano não vendido
+    PLAN_PRICE_STANDARD: z.preprocess((v) => (v === '' ? undefined : v), z.coerce.number().int().min(100).optional()),
+    PLAN_PRICE_MASTER: z.preprocess((v) => (v === '' ? undefined : v), z.coerce.number().int().min(100).optional()),
     CORS_ORIGINS: z.string().default(''),
     DOCS_ENABLED: z.enum(['true', 'false']).default('true'),
   })

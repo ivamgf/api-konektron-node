@@ -1,6 +1,8 @@
 // Planos do KonekTron (seção 1.2 da especificação, atualizada com CRISP-DM e Kanban)
 export const PLANS = Object.freeze({ FREE: 'free', STANDARD: 'standard', MASTER: 'master' });
-export const ROLES = Object.freeze({ CLIENT: 'client', ADMIN: 'admin', PROVIDER: 'provider' });
+// Planos vendidos por assinatura mensal (o Free não tem cobrança); a ordem vai do menor ao maior
+export const PAID_PLANS = Object.freeze([PLANS.STANDARD, PLANS.MASTER]);
+export const ROLES =Object.freeze({ CLIENT: 'client', ADMIN: 'admin', PROVIDER: 'provider' });
 
 export const SECTIONS = Object.freeze({
   SYSTEM_ANALYSIS: 'system-analysis',
