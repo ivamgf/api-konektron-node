@@ -17,15 +17,7 @@ app.disable('x-powered-by');
 app.set('trust proxy', 1); // atrás do Nginx na VPS
 app.use(helmet());
 app.use(cors({ origin: env.corsOrigins, credentials: true }));
-app.use(
-  express.json({
-    limit: '1mb',
-    // notificações do PagBank: a assinatura (x-authenticity-token) é calculada sobre o corpo bruto
-    verify: (req, _res, buf) => {
-      if (req.originalUrl.startsWith('/api/v1/billing/webhooks/')) req.rawBody = buf.toString('utf8');
-    },
-  }),
-);
+app.use(express.json({ limit: '1mb' }));
 app.use(
   pinoHttp({
     logger,

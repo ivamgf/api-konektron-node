@@ -27,7 +27,7 @@ router.get('/sections', (req, res) => {
   );
 });
 
-// Seções ainda não implementadas respondem 501 (respeitando o plano)
+// Seções ainda não implementadas respondem 501
 for (const section of Object.values(SECTIONS)) {
   if (IMPLEMENTED_SECTIONS.includes(section)) continue;
   router.use(`/${section}`, requireSection(section), (_req, res) =>

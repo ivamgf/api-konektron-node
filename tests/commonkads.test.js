@@ -14,10 +14,9 @@ import { buildOpenApi } from '../src/docs/openapi.js';
 
 const id = '0b0f6d0e-3c1a-4f6e-9d55-1f2a3b4c5d6e';
 
-test('CommonKADS: implementado, plano Master', () => {
+test('CommonKADS: implementado e liberado no Free', () => {
   assert.ok(IMPLEMENTED_SECTIONS.includes(SECTIONS.COMMONKADS));
-  assert.ok(canAccessSection({ role: 'client', plan: 'master' }, SECTIONS.COMMONKADS));
-  assert.ok(!canAccessSection({ role: 'client', plan: 'standard' }, SECTIONS.COMMONKADS));
+  assert.ok(canAccessSection({ role: 'client', plan: 'free' }, SECTIONS.COMMONKADS));
 });
 
 test('as 17 planilhas: as de texto têm campos, as em linhas apontam para um cadastro', () => {

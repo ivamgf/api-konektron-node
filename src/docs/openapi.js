@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import pkg from '../../package.json' with { type: 'json' };
-import { PLAN_SECTIONS, PLANS, ROLES } from '#config/plans.js';
+import { PLANS, ROLES } from '#config/plans.js';
 import * as auth from '#modules/auth/auth.schemas.js';
 import { addressSchema } from '#modules/addresses/addresses.schemas.js';
 import { updateProfileSchema } from '#modules/profiles/profiles.schemas.js';
@@ -22,7 +22,6 @@ import * as ct from '#modules/contact/contact.schemas.js';
 import * as fp from '#modules/function-points/fp.schemas.js';
 import { WEIGHTS } from '#modules/function-points/fp.rules.js';
 import * as sc from '#modules/scrum/scrum.schemas.js';
-import * as bl from '#modules/billing/billing.schemas.js';
 
 // Especificação OpenAPI 3.1 gerada a partir dos schemas Zod usados na validação:
 // corpos, filtros, limites e enums nunca divergem do código. Ao criar uma rota nova,
@@ -79,15 +78,15 @@ function entity(schema, extra = {}) {
 const ERRORS = {
   400: 'Requisição inválida (ex.: nenhum campo para atualizar)',
   401: 'Token ausente, inválido ou expirado (ou credenciais incorretas)',
-  403: 'Sem permissão: papel insuficiente ou seção fora do plano',
+  403: 'Sem permissão: área exclusiva do administrador Master',
   404: 'Recurso não encontrado (ou pertence a outro usuário)',
   409: 'Conflito: registro duplicado, em uso ou tipo de projeto incompatível',
   413: 'Arquivo maior que o limite',
   415: 'O arquivo deve ser enviado como application/octet-stream',
   422: 'Dados inválidos; `details` traz os erros por campo',
   429: 'Muitas tentativas; aguarde e tente novamente',
-  502: 'O PagBank recusou a operação ou não respondeu',
-  503: 'Pagamentos não configurados (sem PAGBANK_TOKEN)',
+  502: 'O servidor de e-mail (SMTP) recusou o envio',
+  503: 'Envio de e-mail não configurado (sem SMTP_HOST)',
 };
 
 const PATH_PARAMS = {
@@ -308,8 +307,11 @@ add('get', '/admin/users', {
 });
 add('get', '/admin/users/{id}', { tag: T_ADMIN, summary: 'Obter usuário', errors: adminOnly, response: ref('AdminUser') });
 add('patch', '/admin/users/{id}', {
-  tag: T_ADMIN, summary: 'Editar papel, plano ou status (RF5.1)',
-  description: 'Desativar um usuário encerra as sessões dele. O admin não pode mudar o próprio papel nem se desativar.',
+  tag: T_ADMIN, summary: 'Editar perfil (papel e plano) ou status (RF5.1)',
+  description:
+    'Todo cadastro novo é `client`/`free`; o administrador muda o perfil por aqui. O plano novo vale na próxima renovação ' +
+    'do token. Quem perde a administração (deixa de ser `admin` com plano `master`) ou é desativado tem as sessões ' +
+    'encerradas. O administrador não pode mudar o próprio perfil nem se desativar.',
   body: users.adminUpdateSchema, errors: [...adminOnly, 400], response: ref('AdminUser'),
 });
 add('delete', '/admin/users/{id}', {
@@ -333,8 +335,8 @@ add('post', '/projects', {
   tag: T_PROJ, summary: 'Criar projeto', status: 201,
   description:
     '`software` (padrão) prepara a seção Análise de Sistemas; `data_analysis` cria as 6 fases do ' +
-    'CRISP-DM e exige plano Standard ou Master.',
-  body: projects.createProjectSchema, errors: [403], response: ref('Project'),
+    'CRISP-DM.',
+  body: projects.createProjectSchema, response: ref('Project'),
   example: { name: 'Sistema de Agendamento', type: 'software', description: 'Agenda web para clínicas.' },
 });
 add('get', '/projects/{projectId}', { tag: T_PROJ, summary: 'Obter projeto', response: ref('Project') });
@@ -346,7 +348,7 @@ add('delete', '/projects/{projectId}', { tag: T_PROJ, summary: 'Excluir projeto 
 add('get', '/engineering/sections', {
   tag: T_PROJ, summary: 'Catálogo de seções (RF6)',
   description:
-    'Usado pelo front para montar o menu: indica se cada seção está no plano do usuário, se já ' +
+    'Usado pelo front para montar o menu: indica se cada seção está liberada (todas, em qualquer plano), se já ' +
     'existe na API e o tipo de projeto exigido. Seções não implementadas respondem **501** em ' +
     '`/engineering/{secao}`.',
   response: arrayOf(ref('Section')),
@@ -355,7 +357,7 @@ add('get', '/engineering/sections', {
 // ---------- Análise de Sistemas ----------
 const T_SA = 'Análise de Sistemas';
 const SA = '/projects/{projectId}/system-analysis';
-const sectionErrors = [403, 409]; // plano sem a seção / projeto de outro tipo
+const sectionErrors = [409]; // projeto de outro tipo
 add('get', SA, {
   tag: T_SA, summary: 'Visão geral', description: 'Dados da análise e contagens por tipo e status.',
   errors: sectionErrors, response: ref('SystemAnalysisOverview'),
@@ -462,7 +464,7 @@ crud(`${DM}/models/{modelId}/metrics`, {
 // ---------- Ontologias ----------
 const T_ON = 'Ontologias';
 const ON = '/projects/{projectId}/ontologies';
-const anySection = [403]; // seções para qualquer tipo de projeto: só o plano importa
+const anySection = []; // seções para qualquer tipo de projeto
 add('get', `${ON}/summary`, {
   tag: T_ON, summary: 'Resumo do catálogo',
   description: 'Totais de ontologias, publicadas, com arquivo, soma das contagens e uso de formatos, vocabulários e princípios.',
@@ -591,59 +593,16 @@ add('patch', '/admin/contact-messages/{id}', {
   tag: T_CT, summary: 'Mudar a situação da mensagem (admin)', body: ct.contactUpdateSchema, errors: [403],
   response: ref('ContactMessage'), example: { status: 'answered' },
 });
+add('post', '/admin/contact-messages/{id}/reply', {
+  tag: T_CT, summary: 'Responder por e-mail (admin)',
+  description:
+    'Envia a resposta ao e-mail do remetente pelo SMTP do sistema (`MAIL_FROM`, com resposta para `CONTACT_EMAIL`), ' +
+    'citando a mensagem original. Se o envio der certo, grava `reply`, `repliedAt` e `repliedBy` e marca como ' +
+    '`answered`. **502** quando o servidor de e-mail recusa (ex.: senha do SMTP errada); **503** sem `SMTP_HOST`.',
+  body: ct.contactReplySchema, errors: [403, 502, 503], response: ref('ContactMessage'),
+  example: { message: 'Olá, Ana! Todas as seções estão liberadas no plano Free.' },
+});
 add('delete', '/admin/contact-messages/{id}', { tag: T_CT, summary: 'Excluir mensagem (admin)', status: 204, errors: [403] });
-
-// ---------- Assinaturas (PagBank) ----------
-const T_BL = 'Assinaturas';
-add('get', '/billing/plans', {
-  tag: T_BL, auth: false, summary: 'Planos pagos e mensalidades',
-  description: 'Só aparecem os planos com preço definido (`PLAN_PRICE_STANDARD`, `PLAN_PRICE_MASTER`, em centavos). `enabled` é falso sem `PAGBANK_TOKEN`.',
-  response: ref('BillingCatalog'),
-});
-add('get', '/billing/subscription', {
-  tag: T_BL, summary: 'Minha assinatura',
-  description: '`current` é a assinatura que dá acesso (ou o checkout em aberto); `history` traz as 20 mais recentes.',
-  response: { allOf: [ref('BillingCatalog'), object({ plan: { type: 'string', enum: Object.values(PLANS) }, current: nullable(ref('Subscription')), history: arrayOf(ref('Subscription')) })] },
-});
-add('post', '/billing/checkout', {
-  tag: T_BL, summary: 'Assinar um plano (Checkout Recorrente PagBank)', status: 201,
-  description:
-    'Cria um checkout com `recurrence_plan` mensal e devolve `payUrl`: o app redireciona o usuário para a página de ' +
-    'pagamento do PagBank (cartão de crédito). A 1ª mensalidade é cobrada na hora e o PagBank cria a assinatura para as ' +
-    'seguintes. Um checkout ainda válido do mesmo plano é reaproveitado. Ao voltar, o PagBank leva o usuário para ' +
-    '`APP_URL/billing/return?ref={id}`. Trocar de plano: a assinatura nova, quando ativa, cancela a anterior.',
-  body: bl.checkoutSchema, errors: [400, 409, 429, 502, 503], example: { plan: 'standard', acceptTerms: true },
-  response: object({ id: uuid, payUrl: { type: 'string', format: 'uri' }, expiresAt: dateTime }),
-});
-add('post', '/billing/subscriptions/{id}/refresh', {
-  tag: T_BL, summary: 'Conferir a assinatura no PagBank',
-  description: 'Usado na volta do checkout: consulta o PagBank (sem esperar o webhook) e atualiza o plano do usuário. Depois, renove o token para o plano novo valer.',
-  errors: [429], response: object({ subscription: ref('Subscription'), plan: { type: 'string', enum: Object.values(PLANS) } }),
-});
-add('post', '/billing/subscription/cancel', {
-  tag: T_BL, summary: 'Cancelar minha assinatura',
-  description:
-    'Cancela no PagBank (a cobrança para na hora). Até 7 dias do 1º pagamento (arrependimento, CDC art. 49) o pagamento é ' +
-    'estornado integralmente e o acesso termina (`withdrawal`, `refund`); depois disso não há estorno proporcional e o plano ' +
-    'continua até o fim do período pago (`accessUntil`).',
-  errors: [404, 429, 502], response: object({
-    subscription: ref('Subscription'), plan: { type: 'string', enum: Object.values(PLANS) }, withdrawal: { type: 'boolean' },
-    refund: nullable(object({ requested: { type: 'boolean' }, failed: { type: 'boolean' } })),
-  }),
-});
-add('post', '/billing/webhooks/pagbank', {
-  tag: T_BL, auth: false, summary: 'Notificações do PagBank (webhook)',
-  description:
-    'Recebe avisos de assinaturas (`subscription.*`, URL cadastrada com `npm run pagbank:webhook`), do pagamento ' +
-    '(pedido `ORDE_…`) e do checkout (`CHEC_…`). Com `x-authenticity-token`, confere sha256(`token-corpo`). ' +
-    'O estado é sempre relido na API do PagBank antes de mudar o plano. Status que liberam o plano: ' +
-    '`active`, `trial`, `overdue` e `pending_action` (retentativas); `suspended`, `canceled` e `expired` voltam ao Free.',
-  errors: [401], response: object({ received: { type: 'boolean' } }),
-});
-add('get', '/admin/subscriptions', {
-  tag: T_BL, summary: 'Assinaturas de todos os usuários (admin)', query: bl.subscriptionListQuery, errors: [403],
-  response: paginated({ allOf: [ref('Subscription'), object({ userId: uuid, email: { type: 'string' }, pagbankSubscriptionId: nullable({ type: 'string' }) })] }),
-});
 
 // ---------- Pontos de Função ----------
 const T_FP = 'Pontos de Função';
@@ -736,20 +695,20 @@ const T_KB = 'Kanban';
 const KB = '/projects/{projectId}/kanban';
 add('get', KB, {
   tag: T_KB, summary: 'Quadro completo', description: 'Colunas em ordem, cada uma com seus cartões em ordem.',
-  errors: [403], response: ref('KanbanBoard'),
+  response: ref('KanbanBoard'),
 });
 crud(`${KB}/columns`, {
   tag: T_KB, name: 'KanbanColumn', label: 'coluna', plural: 'colunas',
-  schema: kb.columnSchema, errors: [403],
+  schema: kb.columnSchema,
   example: { name: 'Em andamento', wipLimit: 3 },
 });
 add('post', `${KB}/columns/{id}/move`, {
   tag: T_KB, summary: 'Mover coluna', description: 'Reordena as colunas do quadro e devolve o quadro atualizado.',
-  body: kb.moveColumnSchema, errors: [403], response: ref('KanbanBoard'), example: { position: 0 },
+  body: kb.moveColumnSchema, response: ref('KanbanBoard'), example: { position: 0 },
 });
 crud(`${KB}/cards`, {
   tag: T_KB, name: 'KanbanCard', label: 'cartão', plural: 'cartões',
-  schema: kb.cardSchema, updateSchema: kb.cardUpdateSchema, filters: kb.cardFilters, errors: [403],
+  schema: kb.cardSchema, updateSchema: kb.cardUpdateSchema, filters: kb.cardFilters,
   example: {
     columnId: '0b0f6d0e-3c1a-4f6e-9d55-1f2a3b4c5d6e', title: 'Tela de agendamento', priority: 'high',
     dueDate: '2026-11-30', assignee: 'Ana',
@@ -758,7 +717,7 @@ crud(`${KB}/cards`, {
 add('post', `${KB}/cards/{id}/move`, {
   tag: T_KB, summary: 'Mover cartão',
   description: 'Muda o cartão de coluna e/ou posição, reordenando os vizinhos. Devolve o quadro atualizado.',
-  body: kb.moveCardSchema, errors: [403], response: ref('KanbanBoard'),
+  body: kb.moveCardSchema, response: ref('KanbanBoard'),
   example: { columnId: '0b0f6d0e-3c1a-4f6e-9d55-1f2a3b4c5d6e', position: 0 },
 });
 
@@ -850,7 +809,7 @@ const schemas = {
   Project: entity(projects.createProjectSchema, { ownerId: uuid, deletedAt: nullable(dateTime) }),
   Section: object({
     key: { type: 'string' },
-    enabled: { type: 'boolean', description: 'Incluída no plano do usuário' },
+    enabled: { type: 'boolean', description: 'Liberada para o usuário (todas as seções, em qualquer plano)' },
     implemented: { type: 'boolean' },
     projectType: nullable({ type: 'string' }),
     route: nullable({ type: 'string' }),
@@ -941,17 +900,8 @@ const schemas = {
   ContactMessage: object({
     id: uuid, userId: nullable(uuid), name: { type: 'string' }, email: { type: 'string' }, subject: { type: 'string' },
     message: { type: 'string' }, status: { type: 'string', enum: ct.CONTACT_STATUS }, ip: nullable({ type: 'string' }),
+    reply: nullable({ type: 'string' }), repliedAt: nullable(dateTime), repliedBy: nullable(uuid),
     createdAt: dateTime, updatedAt: dateTime,
-  }),
-  BillingCatalog: object({
-    enabled: { type: 'boolean' }, currency: { type: 'string', example: 'BRL' }, interval: { type: 'string', example: 'MONTH' },
-    plans: arrayOf(object({ plan: { type: 'string', enum: ['standard', 'master'] }, amount: { type: 'integer', description: 'centavos por mês' }, sections: arrayOf({ type: 'string' }) })),
-  }),
-  Subscription: object({
-    id: uuid, plan: { type: 'string', enum: ['standard', 'master'] }, amount: { type: 'integer', description: 'centavos por mês' },
-    status: { type: 'string', enum: bl.SUBSCRIPTION_STATUS }, payUrl: nullable({ type: 'string' }), checkoutExpiresAt: nullable(dateTime),
-    nextInvoiceAt: nullable({ type: 'string', format: 'date' }), activatedAt: nullable(dateTime), canceledAt: nullable(dateTime),
-    accessUntil: nullable(dateTime), refundedAt: nullable(dateTime), createdAt: dateTime, updatedAt: dateTime,
   }),
   FpCount: entity(fp.countSchema, { projectId: uuid, functions: { type: 'integer' }, totalPoints: { type: 'integer' } }),
   FpFunction: entity(fp.functionSchema, {
@@ -989,10 +939,6 @@ const schemas = {
 };
 
 // ---------- Documento ----------
-const planTable = Object.entries(PLAN_SECTIONS)
-  .map(([plan, sections]) => `| ${plan} | ${sections.join(', ')} |`)
-  .join('\n');
-
 const description = `
 API do KonekTron: engenharia de software e análise de dados.
 
@@ -1009,12 +955,9 @@ API do KonekTron: engenharia de software e análise de dados.
 - Toda resposta tem o cabeçalho \`X-Request-Id\` (o mesmo valor aparece nos logs).
 - Cadastro, login e rotas de senha têm limite de 20 tentativas a cada 15 min por IP.
 
-## Planos e seções
-| Plano | Seções |
-|---|---|
-${planTable}
-
-Administradores acessam todas as seções.
+## Perfis
+Todos os planos (\`free\`, \`standard\`, \`master\`) acessam todas as seções; todo cadastro novo começa \`free\`.
+As rotas \`/admin/*\` são exclusivas de quem tem papel \`admin\` **e** plano \`master\`.
 `.trim();
 
 let cached;
@@ -1029,18 +972,17 @@ export function buildOpenApi() {
       { name: T_AUTH, description: 'Cadastro, sessão e senha (RF1, RF2, RF4, RF7)' },
       { name: 'Perfil', description: 'Dados do usuário logado (RF3)' },
       { name: 'Endereços', description: 'Endereços do usuário logado' },
-      { name: T_ADMIN, description: 'Somente para o papel `admin` (RF5)' },
+      { name: T_ADMIN, description: 'Somente para papel `admin` com plano `master` (RF5)' },
       { name: T_PROJ, description: 'Projetos `software` ou `data_analysis` e catálogo de seções' },
-      { name: T_SA, description: 'Requisitos, histórias de usuário e diagramas. Projetos `software`, todos os planos.' },
-      { name: T_DM, description: 'Metodologia CRISP-DM. Projetos `data_analysis`, planos Standard e Master.' },
-      { name: T_ON, description: 'Catálogo de ontologias com métricas, vocabulários, princípios e o arquivo (OWL, RDF, Turtle...). Qualquer tipo de projeto, plano Master.' },
-      { name: T_BPM, description: 'Arquitetura de processos com SIPOC e diagnóstico, e diagramas BPMN com upload. Qualquer tipo de projeto, planos Standard e Master.' },
-      { name: T_CK, description: 'Planilhas CommonKADS (OM, TM, AM, KM, CM, DM, OTA) e MAS-CommonKADS. Qualquer tipo de projeto, plano Master.' },
-      { name: T_FP, description: 'Contagem IFPUG: funções de dados (ALI/AIE) e de transação (EE/SE/CE), complexidade, PF e estimativas. Projetos `software`, plano Master.' },
-      { name: T_SC, description: 'Scrum: dados gerais, papéis, Product/Sprint Backlog, sprints, tasks e eventos. Qualquer tipo de projeto, planos Standard e Master.' },
+      { name: T_SA, description: 'Requisitos, histórias de usuário e diagramas. Projetos `software`.' },
+      { name: T_DM, description: 'Metodologia CRISP-DM. Projetos `data_analysis`.' },
+      { name: T_ON, description: 'Catálogo de ontologias com métricas, vocabulários, princípios e o arquivo (OWL, RDF, Turtle...). Qualquer tipo de projeto.' },
+      { name: T_BPM, description: 'Arquitetura de processos com SIPOC e diagnóstico, e diagramas BPMN com upload. Qualquer tipo de projeto.' },
+      { name: T_CK, description: 'Planilhas CommonKADS (OM, TM, AM, KM, CM, DM, OTA) e MAS-CommonKADS. Qualquer tipo de projeto.' },
+      { name: T_FP, description: 'Contagem IFPUG: funções de dados (ALI/AIE) e de transação (EE/SE/CE), complexidade, PF e estimativas. Projetos `software`.' },
+      { name: T_SC, description: 'Scrum: dados gerais, papéis, Product/Sprint Backlog, sprints, tasks e eventos. Qualquer tipo de projeto.' },
       { name: T_CT, description: 'Formulário de contato (público) e caixa de mensagens do admin.' },
-      { name: T_KB, description: 'Quadro de tarefas com colunas e cartões. Qualquer tipo de projeto, todos os planos.' },
-      { name: T_BL, description: 'Mensalidades dos planos Standard e Master pelo Checkout Recorrente do PagBank (cartão de crédito).' },
+      { name: T_KB, description: 'Quadro de tarefas com colunas e cartões. Qualquer tipo de projeto.' },
     ],
     paths,
     components: {

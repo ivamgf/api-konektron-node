@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { contactSchema } from '#modules/contact/contact.schemas.js';
+import { contactReplySchema, contactSchema } from '#modules/contact/contact.schemas.js';
 import { escapeHtml, mailTemplates } from '#services/mailer.js';
 import { buildOpenApi } from '../src/docs/openapi.js';
 
@@ -21,9 +21,20 @@ test('e-mail de contato escapa o HTML enviado pelo visitante', () => {
   assert.match(mail.subject, /Plano Master/);
 });
 
+test('resposta do admin: texto obrigatório e e-mail citando a mensagem original, com HTML escapado', () => {
+  assert.equal(contactReplySchema.safeParse({ message: ' ' }).success, false);
+  assert.equal(contactReplySchema.parse({ message: '  Olá!  ' }).message, 'Olá!');
+  const original = { ...base, message: 'Pergunta <b>original</b>', createdAt: '2026-10-16T12:00:00Z' };
+  const mail = mailTemplates.contactReply(original, 'Resposta <script>');
+  assert.equal(mail.subject, 'Re: Plano Master');
+  assert.ok(mail.html.includes('Resposta &lt;script&gt;'));
+  assert.ok(mail.html.includes('Pergunta &lt;b&gt;original&lt;/b&gt;'));
+});
+
 test('OpenAPI documenta o contato público e a caixa do admin', () => {
   const { paths } = buildOpenApi();
   assert.deepEqual(paths['/contact'].post.security, []);
   assert.ok(paths['/admin/contact-messages'].get);
   assert.ok(paths['/admin/contact-messages/{id}'].patch);
+  assert.ok(paths['/admin/contact-messages/{id}/reply'].post);
 });

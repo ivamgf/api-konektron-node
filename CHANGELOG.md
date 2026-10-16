@@ -1,5 +1,31 @@
 # Changelog
 
+## 5.0.0 — 2026-10-16
+
+### Adicionado
+- `POST /admin/contact-messages/:id/reply`: o administrador responde à mensagem de contato pela plataforma. O e-mail
+  sai pelo SMTP do sistema para o remetente, citando a mensagem original e com resposta para `CONTACT_EMAIL`.
+  Só marca como respondida (`reply`, `repliedAt`, `repliedBy`, migration 000022) se o envio der certo; se o
+  servidor de e-mail recusar, devolve 502 com o motivo, e 503 quando não há SMTP configurado.
+
+### Removido
+- **Integração com o PagBank desfeita**: rotas `/billing/*` (planos, checkout, assinatura, cancelamento,
+  webhook) e `/admin/subscriptions`, o serviço `pagbank.js`, o script `pagbank:webhook`, a rotina horária de
+  fim de acesso, as variáveis `PAGBANK_ENV`, `PAGBANK_TOKEN`, `PLAN_PRICE_STANDARD`, `PLAN_PRICE_MASTER` e os
+  logs de homologação do sandbox.
+- Migration 000021: apaga as tabelas `subscriptions` e `payment_events`, deixa todos os usuários no plano Free
+  e com papel `client`, exceto o dono do sistema (administrador com plano Master).
+
+### Alterado
+- **Todas as seções liberadas em todos os planos**, inclusive o Free (antes o Free tinha só Análise de Sistemas
+  e Kanban). Os planos `free`, `standard` e `master` e os papéis continuam distintos no cadastro; todo cadastro
+  novo começa `client`/`free` e o perfil é mudado pelo administrador em `PATCH /admin/users/:id`.
+- **Administração só para administrador com plano Master** (`requireMasterAdmin`): usuários, logs, mensagens de
+  contato e acesso a projetos de outros usuários. A checagem relê o banco a cada requisição, então um
+  rebaixamento vale na hora; quem perde a administração tem as sessões encerradas.
+- O administrador não pode mudar o próprio papel nem o próprio plano (perderia o acesso).
+- OpenAPI e README sem planos pagos; seção "Perfis" explica a regra de acesso.
+
 ## 4.3.0 — 2026-10-16
 
 ### Adicionado

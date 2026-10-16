@@ -20,6 +20,9 @@ if (transporter && env.SMTP_USER && !env.SMTP_PASSWORD && !env.isTest) {
 export const escapeHtml = (value) =>
   String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
+// Sem SMTP os e-mails só vão para o log: quem precisa garantir a entrega (ex.: resposta ao contato) confere antes
+export const mailEnabled = () => Boolean(transporter);
+
 export async function sendMail({ to, subject, html, replyTo }) {
   if (!transporter) {
     logger.warn({ to, subject, html }, 'SMTP não configurado — e-mail apenas registrado no log');
@@ -38,6 +41,15 @@ export const mailTemplates = {
     html:
       `<p><strong>${escapeHtml(name)}</strong> &lt;${escapeHtml(email)}&gt; escreveu pelo formulário de contato:</p>` +
       `<p><strong>${escapeHtml(subject)}</strong></p><p style="white-space:pre-wrap">${escapeHtml(message)}</p>`,
+  }),
+  // Resposta da equipe a uma mensagem de contato, citando a mensagem original
+  contactReply: ({ name, subject, message, createdAt }, reply) => ({
+    subject: `Re: ${subject}`,
+    html:
+      `<p>Olá, ${escapeHtml(name)}!</p><p style="white-space:pre-wrap">${escapeHtml(reply)}</p>` +
+      '<p>Equipe KonekTron</p><hr>' +
+      `<p style="color:#666">Em ${new Date(createdAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}, você escreveu:</p>` +
+      `<blockquote style="color:#666;white-space:pre-wrap;border-left:3px solid #ccc;margin:0;padding-left:12px">${escapeHtml(message)}</blockquote>`,
   }),
   resetPassword: (link) => ({
     subject: 'KonekTron — Recuperação de senha',

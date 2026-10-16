@@ -1,17 +1,23 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { canAccessSection, SECTIONS } from '#config/plans.js';
+import { canAccessSection, isMasterAdmin, PLANS, ROLES, SECTIONS } from '#config/plans.js';
 
-test('plano free só acessa system-analysis', () => {
-  const user = { role: 'client', plan: 'free' };
-  assert.ok(canAccessSection(user, SECTIONS.SYSTEM_ANALYSIS));
-  assert.ok(!canAccessSection(user, SECTIONS.CRISP_DM));
+test('todos os planos, inclusive o free, acessam todas as seções', () => {
+  for (const plan of Object.values(PLANS)) {
+    for (const s of Object.values(SECTIONS)) assert.ok(canAccessSection({ role: 'client', plan }, s));
+  }
 });
 
-test('plano standard inclui CRISP-DM', () => {
-  assert.ok(canAccessSection({ role: 'client', plan: 'standard' }, SECTIONS.CRISP_DM));
+test('seção desconhecida ou sem usuário não é liberada', () => {
+  assert.ok(!canAccessSection({ role: 'client', plan: 'free' }, 'inexistente'));
+  assert.ok(!canAccessSection(null, SECTIONS.KANBAN));
 });
 
-test('admin acessa tudo', () => {
-  for (const s of Object.values(SECTIONS)) assert.ok(canAccessSection({ role: 'admin', plan: 'free' }, s));
+test('administração só para administrador com plano master', () => {
+  assert.ok(isMasterAdmin({ role: ROLES.ADMIN, plan: PLANS.MASTER }));
+  assert.ok(!isMasterAdmin({ role: ROLES.ADMIN, plan: PLANS.FREE }));
+  assert.ok(!isMasterAdmin({ role: ROLES.ADMIN, plan: PLANS.STANDARD }));
+  assert.ok(!isMasterAdmin({ role: ROLES.CLIENT, plan: PLANS.MASTER }));
+  assert.ok(!isMasterAdmin({ role: ROLES.PROVIDER, plan: PLANS.MASTER }));
+  assert.ok(!isMasterAdmin(undefined));
 });

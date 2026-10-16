@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { db } from '#database/connection.js';
 import { authenticate } from '#middlewares/authenticate.js';
-import { requireRole } from '#middlewares/authorize.js';
+import { requireMasterAdmin } from '#middlewares/authorize.js';
 import { validate } from '#middlewares/validate.js';
 import { listQuery } from './logs.schemas.js';
 
 const router = Router();
-router.use(authenticate, requireRole('admin'));
+router.use(authenticate, requireMasterAdmin);
 
 router.get('/', validate({ query: listQuery }), async (req, res) => {
   const { page, pageSize, userId, action, from, to } = req.validated.query;

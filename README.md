@@ -9,7 +9,7 @@ Node.js 24 · Express 5 · PostgreSQL (Knex) · Zod 4 · JWT.
 src/
 ├── server.js · app.js · routes.js
 ├── docs/          openapi.js (especificação gerada dos schemas Zod), página Swagger UI
-├── config/        env.js (validação do .env), plans.js (planos e seções)
+├── config/        env.js (validação do .env), plans.js (perfis e seções)
 ├── database/      connection.js, helpers.js, migrations/, seeds/
 ├── middlewares/   authenticate, authorize, validate, loadProject, errorHandler
 ├── services/      mailer (SMTP), auditLog
@@ -31,7 +31,6 @@ src/
     ├── scrum/        papéis, backlogs, sprints, tasks e eventos (qualquer projeto)
     ├── kanban/       quadro de tarefas (qualquer projeto)
     ├── contact/      formulário de contato e caixa de mensagens do admin
-    ├── billing/      assinaturas mensais pelo Checkout Recorrente do PagBank
     └── engineering/  RF6 — catálogo de seções (as não implementadas respondem 501)
 ```
 
@@ -83,8 +82,8 @@ código. **Ao criar uma rota, registre-a lá**. Os exemplos são validados contr
 | POST | /auth/change-password · /auth/resend-verification | logado | RF1/RF4 |
 | GET · PATCH | /profiles/me | logado | RF3 |
 | CRUD | /addresses | logado | RF3 |
-| GET · PATCH · DELETE | /admin/users[/:id] | admin | RF5 |
-| GET | /admin/logs · /admin/logs/summary | admin | RF5 |
+| GET · PATCH · DELETE | /admin/users[/:id] | admin Master | RF5 |
+| GET | /admin/logs · /admin/logs/summary | admin Master | RF5 |
 
 ### Projetos e engenharia
 
@@ -92,11 +91,11 @@ código. **Ao criar uma rota, registre-a lá**. Os exemplos são validados contr
 |---|---|---|
 | GET · POST | /projects | `type`: `software` (padrão) ou `data_analysis` |
 | GET · PATCH · DELETE | /projects/:projectId | o tipo não muda após criado |
-| GET | /engineering/sections | seções, se estão liberadas pelo plano e implementadas |
+| GET | /engineering/sections | seções, se estão liberadas (todas) e implementadas |
 
 ### Análise de Sistemas — `/projects/:projectId/system-analysis`
 
-Disponível em todos os planos, para projetos `software`.
+Projetos `software`.
 
 | Método | Rota | Observação |
 |---|---|---|
@@ -109,7 +108,7 @@ Disponível em todos os planos, para projetos `software`.
 
 ### CRISP-DM — `/projects/:projectId/crisp-dm`
 
-Exige plano Standard/Master e projeto `data_analysis`. As 6 fases são criadas
+Exige projeto `data_analysis`. As 6 fases são criadas
 automaticamente com o projeto.
 
 | Método | Rota | Fase |
@@ -126,7 +125,7 @@ automaticamente com o projeto.
 
 ### Ontologias — `/projects/:projectId/ontologies`
 
-Plano Master, qualquer tipo de projeto (migration 000013). A raiz é a própria coleção.
+Qualquer tipo de projeto (migration 000013). A raiz é a própria coleção.
 
 | Método | Rota | Observação |
 |---|---|---|
@@ -140,7 +139,7 @@ indivíduos. Só preenche o que está vazio; a leitura completa volta em `analys
 
 ### BPM — `/projects/:projectId/bpm`
 
-Planos Standard e Master, qualquer tipo de projeto (migration 000014).
+Qualquer tipo de projeto (migration 000014).
 
 | Método | Rota | Observação |
 |---|---|---|
@@ -151,7 +150,7 @@ Planos Standard e Master, qualquer tipo de projeto (migration 000014).
 
 ### CommonKADS — `/projects/:projectId/commonkads`
 
-Plano Master, qualquer tipo de projeto (migration 000015). As 17 planilhas do CommonKADS e da
+Qualquer tipo de projeto (migration 000015). As 17 planilhas do CommonKADS e da
 extensão MAS-CommonKADS: as de texto livre guardam o conteúdo na própria planilha; as em linhas
 são cadastros (OM-3/TM-1 → tarefas, OM-4/TM-2 → conhecimento, AM-1/MAS → agentes, CM-1/CM-2 →
 transações). Os vínculos são guardados uma vez só e o relatório os resolve nos dois sentidos.
@@ -181,7 +180,7 @@ curl -X PUT $API/projects/$ID/ontologies/$ONTO/file \
 
 ### Pontos de Função — `/projects/:projectId/function-points`
 
-Plano Master, projetos `software` (migration 000017). Contagem IFPUG: a API calcula a complexidade
+Projetos `software` (migration 000017). Contagem IFPUG: a API calcula a complexidade
 (matriz TR × TD para ALI/AIE, ALR × TD para EE/SE/CE) e os PF de cada função na gravação.
 
 | Método | Rota | Observação |
@@ -193,7 +192,7 @@ Plano Master, projetos `software` (migration 000017). Contagem IFPUG: a API calc
 
 ### Scrum — `/projects/:projectId/scrum`
 
-Planos Standard e Master, qualquer tipo de projeto (migration 000018), segundo o Guia do Scrum 2020.
+Qualquer tipo de projeto (migration 000018), segundo o Guia do Scrum 2020.
 
 | Método | Rota | Observação |
 |---|---|---|
@@ -225,50 +224,20 @@ sem nenhuma marcação é marcado pela ordem (1ª, 2ª e última). Depois disso:
 fica no banco (migration 000016) e, com `CONTACT_EMAIL` definido, também vai por e-mail. O admin lista
 (`?status=&page=`), muda a situação (`new`, `read`, `answered`, `archived`) e exclui em `/admin/contact-messages`.
 
-### Assinaturas (PagBank) — `/billing` e `/admin/subscriptions`
+Teste do e-mail: `npm run mail:test [-- destino]` confere o SMTP e envia uma mensagem de teste (padrão: `CONTACT_EMAIL`).
 
-Os planos Standard e Master são vendidos por mensalidade no cartão de crédito, pelo **Checkout Recorrente**
-do PagBank: o usuário escolhe o plano, a API cria um checkout com `recurrence_plan` mensal e o app o
-redireciona para a página de pagamento do PagBank. O 1º pagamento cria a assinatura no PagBank, que cobra
-os meses seguintes sozinho.
+### Perfis e administração
 
-| Rota | O que faz |
-| --- | --- |
-| `GET /billing/plans` (pública) | planos com preço (`PLAN_PRICE_STANDARD`, `PLAN_PRICE_MASTER`, em centavos) |
-| `POST /billing/checkout` `{ plan }` | cria (ou reaproveita) o checkout e devolve `payUrl` |
-| `POST /billing/subscriptions/:id/refresh` | volta do checkout: confere no PagBank sem esperar o webhook |
-| `GET /billing/subscription` | assinatura atual e histórico |
-| `POST /billing/subscription/cancel` | cancela no PagBank e volta ao Free na hora |
-| `POST /billing/webhooks/pagbank` (pública) | avisos de pagamento, checkout e assinatura |
-| `GET /admin/subscriptions` | todas as assinaturas (admin) |
-
-- **Plano do usuário**: `active` e `trial` liberam o plano; `overdue` e `pending_action` só mantêm o acesso de
-  quem já pagou ao menos uma vez (no sandbox, o 1º pagamento recusado cria a assinatura já em `OVERDUE`);
-  `suspended`, `canceled` e `expired` voltam ao Free. A mudança chega ao token na próxima renovação (o app
-  renova ao voltar do pagamento).
-- **Aceite**: `POST /billing/checkout` exige `acceptTerms: true` (termos e cobrança recorrente), gravado em
-  `terms_accepted_at` e no log de auditoria.
-- **Cancelamento**: até 7 dias do 1º pagamento vale o direito de arrependimento (CDC art. 49): estorno integral
-  pela API do PagBank (`/payments/{id}/refunds`) e fim do acesso. Depois, a cobrança para e o plano segue até o
-  fim do período pago (`access_until`); uma rotina horária no `server.js` devolve ao Free quando o prazo vence.
-- **Troca de plano**: a assinatura nova, quando ativa, cancela a anterior no PagBank. Excluir a conta cancela tudo.
-- **Webhook**: o corpo é só um aviso; o estado é sempre relido na API do PagBank com o nosso token. Com
-  `x-authenticity-token`, a API confere `sha256("{PAGBANK_TOKEN}-{corpo}")` e recusa (401) se não bater.
-  As notificações ficam em `payment_events` (migration 000020).
-- **Configuração**: `PAGBANK_ENV` (`sandbox` | `production`), `PAGBANK_TOKEN` e os preços. Os avisos de
-  pagamento e checkout vão na criação do checkout (só com `API_URL` pública em HTTPS); os de assinatura são
-  uma preferência da conta: rode `npm run pagbank:webhook` uma vez por ambiente (`-- --show` só mostra).
-- **URLs públicas**: o firewall do PagBank recusa (403, página HTML) checkouts com `localhost` ou IP interno nas
-  URLs. Com `APP_URL`/`API_URL` locais, a API cria o checkout sem URL de retorno/notificação.
-- **Requisitos do PagBank**: a API de Pagamentos Recorrentes exige conta **PJ**; produção só depois do
-  [formulário de homologação](https://app.pipefy.com/public/form/2e56YZLK). Teste antes no sandbox. Com
-  `LOG_LEVEL=debug` a API registra requisição e resposta de cada chamada ao PagBank (sem o token); os logs
-  dos testes no sandbox estão em `docs/homologacao-pagbank/sandbox-logs.json`.
-- **E-mail**: `npm run mail:test [-- destino]` confere o SMTP e envia uma mensagem de teste (padrão: `CONTACT_EMAIL`).
+Não há cobrança: todos os planos (`free`, `standard`, `master`) acessam todas as seções, e todo cadastro novo
+começa `client`/`free`. Os perfis continuam distintos no banco; quem os muda é o administrador, em
+`PATCH /admin/users/:id` (`role`, `plan`). As rotas `/admin/*` (usuários, logs, mensagens) e o acesso a
+projetos de outros usuários são exclusivos de quem tem papel `admin` **e** plano `master`; o middleware
+`requireMasterAdmin` confere isso no banco a cada requisição, então um rebaixamento vale na hora. A migration
+000021 removeu as tabelas da antiga integração com o PagBank e deixou todos como Free, exceto o dono do sistema.
 
 ### Kanban — `/projects/:projectId/kanban`
 
-Disponível em todos os planos, para qualquer tipo de projeto (migration 000010).
+Qualquer tipo de projeto (migration 000010).
 
 | Método | Rota | Observação |
 |---|---|---|

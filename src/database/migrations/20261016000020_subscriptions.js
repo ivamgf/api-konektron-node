@@ -1,5 +1,6 @@
 import { addUpdatedAtTrigger, uuidPk } from '../helpers.js';
 
+// Removidas na 000021 (a cobrança saiu do sistema); fica aqui porque já foi aplicada nos bancos.
 // Assinaturas mensais pagas no Checkout Recorrente do PagBank. O id da linha vai como reference_id
 // do checkout; cada checkout cria um plano no PagBank (pagbank_plan_id), que identifica a assinatura
 // gerada depois do primeiro pagamento.
