@@ -11,6 +11,11 @@ const transporter = env.SMTP_HOST
     })
   : null;
 
+// Titan, Gmail etc. recusam o login sem senha: avisa já na inicialização, não só quando um e-mail falha
+if (transporter && env.SMTP_USER && !env.SMTP_PASSWORD && !env.isTest) {
+  logger.warn({ host: env.SMTP_HOST, user: env.SMTP_USER }, 'SMTP_PASSWORD vazio: o envio de e-mails vai falhar (rode npm run mail:test)');
+}
+
 // Texto vindo do usuário dentro de um e-mail HTML
 export const escapeHtml = (value) =>
   String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
