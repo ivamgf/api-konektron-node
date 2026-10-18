@@ -6,6 +6,15 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # O .env não vai para o repositório; os testes não acessam banco nem SMTP,
+    # mas o src/config/env.js exige estas variáveis ao ser importado.
+    env:
+      NODE_ENV: test
+      LOG_LEVEL: warn
+      APP_URL: http://localhost:5173
+      API_URL: http://localhost:3333
+      DATABASE_URL: postgres://konektron:konektron@localhost:5432/konektron_test
+      JWT_ACCESS_SECRET: ci-test-secret-nao-usar-em-producao-0123456789abcdef
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
