@@ -30,12 +30,27 @@ export const logoutSchema = z.object({
   allDevices: z.boolean().optional(),
 });
 
+// Login com Google: `credential` é o ID token devolvido pelo botão do Google.
+// acceptTerms só é exigido quando o login cria uma conta nova.
+export const googleSchema = z.object({
+  credential: z.string().min(100, { error: 'Credencial do Google inválida' }),
+  acceptTerms: z.boolean().optional(),
+});
+
+// currentPassword fica opcional para contas só Google definirem a primeira senha;
+// o serviço exige a atual quando a conta já tem senha.
 export const changePasswordSchema = z
-  .object({ currentPassword: z.string().min(1), password, confirmPassword: z.string() })
+  .object({ currentPassword: z.string().min(1).optional(), password, confirmPassword: z.string() })
   .refine(...samePassword)
   .refine((d) => d.password !== d.currentPassword, {
     error: 'A nova senha deve ser diferente da atual',
     path: ['password'],
   });
 
-export const deleteAccountSchema = z.object({ password: z.string().min(1) });
+// Com senha local, confirma com a senha; conta só Google confirma digitando o próprio e-mail.
+export const deleteAccountSchema = z
+  .object({ password: z.string().min(1).optional(), confirmEmail: email.optional() })
+  .refine((d) => d.password || d.confirmEmail, {
+    error: 'Informe a senha (ou o e-mail, em conta só Google)',
+    path: ['password'],
+  });

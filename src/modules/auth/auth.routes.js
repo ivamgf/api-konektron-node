@@ -18,6 +18,7 @@ const strict = rateLimit({
 router.post('/register', strict, validate({ body: s.registerSchema }), c.register);
 router.post('/verify-email', validate({ body: s.tokenSchema }), c.verifyEmail);
 router.post('/login', strict, validate({ body: s.loginSchema }), c.login);
+router.post('/google', strict, validate({ body: s.googleSchema }), c.google); // UC002 A1
 router.post('/refresh', validate({ body: s.refreshSchema }), c.refresh);
 router.post('/logout', authenticate, validate({ body: s.logoutSchema }), c.logout);
 router.post('/forgot-password', strict, validate({ body: s.forgotSchema }), c.forgotPassword);
@@ -34,6 +35,5 @@ router.post(
   c.changePassword,
 );
 router.post('/resend-verification', authenticate, strict, c.resendVerification);
-// TODO: GET /google e /google/callback — login social (UC002 A1)
 
 export default router;

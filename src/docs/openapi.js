@@ -249,6 +249,16 @@ add('post', '/auth/login', {
   tag: T_AUTH, auth: false, summary: 'Entrar (RF2)', body: auth.loginSchema, errors: [429], response: ref('AuthResult'),
   example: { email: 'ana@exemplo.com', password: 'senhaSegura123' },
 });
+add('post', '/auth/google', {
+  tag: T_AUTH, auth: false, summary: 'Entrar com Google (UC002 A1)',
+  description:
+    '`credential` é o ID token devolvido pelo botão do Google (Google Identity Services). Entra pela conta ' +
+    'vinculada; se não houver, vincula a conta com o mesmo e-mail; se também não houver, cria a conta (201), o ' +
+    'que exige `acceptTerms: true` (sem ele, 422 com `details.acceptTerms`). Responde 503 quando ' +
+    '`GOOGLE_CLIENT_ID` não está configurado.',
+  body: auth.googleSchema, status: 200, errors: [401, 409, 429, 503],
+  response: { allOf: [ref('AuthResult'), object({ created: { type: 'boolean', description: 'true quando a conta foi criada agora' } })] },
+});
 add('post', '/auth/refresh', {
   tag: T_AUTH, auth: false, summary: 'Renovar a sessão',
   description:
@@ -274,12 +284,16 @@ add('post', '/auth/reset-password', {
 add('get', '/auth/me', { tag: T_AUTH, summary: 'Usuário logado', response: ref('User') });
 add('delete', '/auth/me', {
   tag: T_AUTH, summary: 'Excluir a própria conta',
-  description: 'Exige a senha. Os dados de login são anonimizados e o e-mail fica livre para novo cadastro.',
+  description:
+    'Exige a senha; conta só Google (`hasPassword: false`) confirma com `confirmEmail`. Os dados de login são ' +
+    'anonimizados e o e-mail fica livre para novo cadastro.',
   body: auth.deleteAccountSchema, status: 204, errors: [400, 429],
 });
 add('post', '/auth/change-password', {
   tag: T_AUTH, summary: 'Trocar a senha',
-  description: 'Exige a senha atual. Encerra as outras sessões e devolve tokens novos para esta.',
+  description:
+    'Exige a senha atual, exceto em conta só Google (`hasPassword: false`), que define aqui a primeira senha. ' +
+    'Encerra as outras sessões e devolve tokens novos para esta.',
   body: auth.changePasswordSchema, errors: [400, 429], response: ref('Tokens'),
   example: { currentPassword: 'senhaSegura123', password: 'novaSenha456', confirmPassword: 'novaSenha456' },
 });
@@ -737,10 +751,17 @@ const user = object(
     role: { type: 'string', enum: Object.values(ROLES) },
     plan: { type: 'string', enum: Object.values(PLANS) },
     emailVerified: { type: 'boolean' },
+    hasPassword: { type: 'boolean', description: 'false em conta criada pelo Google (sem senha local)' },
+    googleLinked: { type: 'boolean' },
   },
-  ['id', 'email', 'role', 'plan', 'emailVerified'],
+  ['id', 'email', 'role', 'plan', 'emailVerified', 'hasPassword', 'googleLinked'],
 );
-const { emailVerified: _emailVerified, ...adminUserBase } = user.properties;
+const {
+  emailVerified: _emailVerified,
+  hasPassword: _hasPassword,
+  googleLinked: _googleLinked,
+  ...adminUserBase
+} = user.properties;
 const profile = toSchema(updateProfileSchema, 'output');
 const analysis = object({ ...toSchema(sa.analysisUpdateSchema, 'output').properties, updatedAt: nullable(dateTime) });
 const phase = object({
@@ -943,7 +964,7 @@ const description = `
 API do KonekTron: engenharia de software e análise de dados.
 
 ## Autenticação
-1. \`POST /auth/register\` ou \`POST /auth/login\` devolvem \`accessToken\` (JWT, 15 min) e \`refreshToken\` (30 dias).
+1. \`POST /auth/register\`, \`POST /auth/login\` ou \`POST /auth/google\` devolvem \`accessToken\` (JWT, 15 min) e \`refreshToken\` (30 dias).
 2. Envie \`Authorization: Bearer <accessToken>\` nas rotas protegidas (botão **Authorize**).
    Nesta página, um login ou cadastro feito em *Try it out* já preenche o token.
 3. Quando o access token expirar (401), troque o refresh token em \`POST /auth/refresh\`.

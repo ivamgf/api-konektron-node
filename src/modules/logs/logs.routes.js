@@ -34,7 +34,7 @@ router.get('/summary', async (_req, res) => {
     db('users').whereNull('deletedAt').count({ total: '*' }),
     db('users').whereNull('deletedAt').select('plan').count({ total: '*' }).groupBy('plan'),
     db('audit_logs')
-      .where({ action: 'auth.login' })
+      .whereIn('action', ['auth.login', 'auth.login_google'])
       .where('createdAt', '>', db.raw(`now() - interval '30 days'`))
       .select(db.raw(`date_trunc('day', created_at)::date as day`), db.raw('count(*)::int as total'))
       .groupBy('day')

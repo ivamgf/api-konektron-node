@@ -76,10 +76,19 @@ código. **Ao criar uma rota, registre-a lá**. Os exemplos são validados contr
 | Método | Rota | Acesso | Req. |
 |---|---|---|---|
 | POST | /auth/register · /auth/login · /auth/refresh | público | RF1/RF2 |
+| POST | /auth/google (`{ credential, acceptTerms? }`) | público | UC002 A1 |
 | POST | /auth/verify-email · /auth/forgot-password · /auth/reset-password | público | RF1/RF4 |
 | POST | /auth/logout (`{ refreshToken }` ou `{ allDevices: true }`) | logado | RF7 |
-| GET · DELETE | /auth/me (DELETE exige `{ password }`) | logado | RF2/RF5 |
+| GET · DELETE | /auth/me (DELETE exige `{ password }`, ou `{ confirmEmail }` em conta só Google) | logado | RF2/RF5 |
 | POST | /auth/change-password · /auth/resend-verification | logado | RF1/RF4 |
+
+**Login com Google:** o app usa o botão do Google (Google Identity Services) e envia o ID token
+em `POST /auth/google`; a API confere a assinatura com `google-auth-library` (sem client secret).
+A conta vinculada entra direto; sem vínculo, o `google_id` é ligado à conta com o mesmo e-mail;
+sem conta, ela é criada sem senha e com o e-mail verificado, após o aceite dos Termos (422 com
+`details.acceptTerms` até lá). Conta só Google define a primeira senha em `/auth/change-password`
+sem a senha atual. Configure `GOOGLE_CLIENT_ID` com o ID do cliente OAuth (tipo Aplicativo da
+Web, com o domínio do app em "Origens JavaScript autorizadas"); vazio, a rota responde 503.
 | GET · PATCH | /profiles/me | logado | RF3 |
 | CRUD | /addresses | logado | RF3 |
 | GET · PATCH · DELETE | /admin/users[/:id] | admin Master | RF5 |
