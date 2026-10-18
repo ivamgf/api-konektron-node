@@ -301,10 +301,19 @@ invadido em horas.
 ## Deploy na VPS (HostGator)
 
 **Com o painel (Docker):** crie um app no mesmo projeto do banco apontando para este
-repositório; o `Dockerfile` instala as dependências, aplica as migrations ao iniciar
-(`npm run start:prod`) e informa a saúde em `/api/v1/health`. Configure no painel as
-variáveis do `.env.example` (com `NODE_ENV=production` e a `DATABASE_URL` interna), a porta
-3333 e o domínio com HTTPS.
+repositório, com o Dockerfile em `.github/workflows/Dockerfile` e o contexto do build na
+raiz. Ele instala as dependências, aplica as migrations ao iniciar e informa a saúde em
+`/api/v1/health`. Configure no painel as variáveis do `.env.example` (com
+`NODE_ENV=production` e a `DATABASE_URL` interna), a porta 3333 e o domínio com HTTPS.
+
+**Docker direto na VPS:**
+
+```bash
+git clone -b main https://github.com/ivamgf/api-konektron-node.git && cd api-konektron-node
+# crie o .env de produção a partir do .env.example
+docker build -f .github/workflows/Dockerfile -t konektron-api .
+docker run -d --name konektron-api --env-file .env -p 3333:3333 --restart unless-stopped konektron-api
+```
 
 **Sem Docker:** Node 24 via nvm, PM2 (`pm2 start ecosystem.config.cjs --env production`) e
 Nginx como proxy reverso com HTTPS (Let's Encrypt) para a porta 3333.

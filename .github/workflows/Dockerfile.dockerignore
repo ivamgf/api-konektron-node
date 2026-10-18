@@ -1,0 +1,14 @@
+# Lido pelo BuildKit por estar ao lado do Dockerfile (nome <Dockerfile>.dockerignore).
+# Os caminhos são relativos ao contexto do build: a raiz do repositório.
+node_modules
+npm-debug.log*
+.env
+.env.*
+!.env.example
+.git
+.github
+.idea
+.vscode
+coverage
+logs
+tests
