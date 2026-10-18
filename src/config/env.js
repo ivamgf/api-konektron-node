@@ -31,6 +31,15 @@ const schema = z
     JWT_ACCESS_SECRET: z.string().min(32, { error: 'precisa ter ao menos 32 caracteres' }),
     JWT_ACCESS_EXPIRES: z.string().default('15m'),
     JWT_REFRESH_EXPIRES_DAYS: z.coerce.number().int().positive().default(30),
+    // Login com Google: ID do cliente OAuth (Web). Vazio desliga o POST /auth/google.
+    GOOGLE_CLIENT_ID: z.preprocess(
+      (v) => (typeof v === 'string' && !v.trim() ? undefined : v),
+      z
+        .string()
+        .trim()
+        .regex(/\.apps\.googleusercontent\.com$/, { error: 'use o ID do cliente OAuth (...apps.googleusercontent.com)' })
+        .optional(),
+    ),
     SMTP_HOST: z.string().optional(),
     SMTP_PORT: z.coerce.number().int().optional(),
     SMTP_SECURE: z.enum(['true', 'false']).default('true'),

@@ -1,6 +1,6 @@
 {
   "name": "konektron-api",
-  "version": "5.0.0",
+  "version": "5.1.0",
   "description": "API do sistema KonekTron - Engenharia de Software e Análise de Dados",
   "type": "module",
   "license": "MIT",
@@ -38,6 +38,7 @@
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "express-rate-limit": "^8.0.1",
+    "google-auth-library": "^11.1.0",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "knex": "^3.1.0",

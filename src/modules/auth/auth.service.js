@@ -4,6 +4,7 @@ import { AppError } from '#utils/AppError.js';
 import { logger } from '#utils/logger.js';
 import { generateOpaqueToken, hashToken, signAccessToken } from '#utils/tokens.js';
 import { sendMail, mailTemplates } from '#services/mailer.js';
+import { verifyGoogleCredential } from '#services/google.js';
 import { usersService } from '#modules/users/users.service.js';
 import { authRepository as repo } from './auth.repository.js';
 
@@ -20,6 +21,8 @@ export const publicUser = (u) => ({
   role: u.role,
   plan: u.plan,
   emailVerified: Boolean(u.emailVerifiedAt),
+  hasPassword: Boolean(u.passwordHash), // false em contas criadas pelo Google
+  googleLinked: Boolean(u.googleId),
 });
 
 async function issueTokens(user) {
@@ -67,12 +70,21 @@ async function findActiveUser(userId) {
   return user;
 }
 
-// Contas só Google não têm senha local
 async function assertPassword(user, password) {
-  if (!user.passwordHash) throw new AppError('Esta conta não possui senha local', 400);
+  if (!password) throw new AppError('Informe a senha atual', 400, { currentPassword: ['Obrigatório'] });
   if (!(await bcrypt.compare(password, user.passwordHash))) {
     throw new AppError('Senha atual incorreta', 401);
   }
+}
+
+// Vincula a conta Google a um usuário já existente (mesmo e-mail, verificado pelo Google)
+async function linkGoogle(user, googleId) {
+  if (user.googleId && user.googleId !== googleId) {
+    throw new AppError('Este e-mail já está vinculado a outra conta Google', 409);
+  }
+  const changes = { googleId, ...(!user.emailVerifiedAt && { emailVerifiedAt: new Date() }) };
+  await repo.updateUser(user.id, changes);
+  return { ...user, ...changes };
 }
 
 export const authService = {
@@ -111,6 +123,40 @@ export const authService = {
 
     await repo.updateUser(user.id, { lastLoginAt: new Date() });
     return { user: publicUser(user), ...(await issueTokens(user)) };
+  },
+
+  // UC002 A1 - Entrar com Google: entra pela conta vinculada, vincula a conta com o mesmo
+  // e-mail ou cria uma nova (esta só com o aceite dos Termos de Uso).
+  async googleLogin({ credential, acceptTerms }) {
+    const { googleId, email } = await verifyGoogleCredential(credential);
+
+    let user = await repo.findUserByGoogleId(googleId);
+    let created = false;
+    if (!user) {
+      const existing = await repo.findUserByEmail(email);
+      if (existing) {
+        if (!existing.isActive) throw new AppError('Conta desativada', 401);
+        user = await linkGoogle(existing, googleId);
+      } else {
+        if (!acceptTerms) {
+          throw new AppError('Aceite os Termos de Uso para criar a conta', 422, {
+            acceptTerms: ['Você deve aceitar os Termos de Uso'],
+          });
+        }
+        user = await repo.createUserWithProfile({
+          email,
+          googleId,
+          passwordHash: null,
+          emailVerifiedAt: new Date(), // o Google já verificou o e-mail
+          termsAccepted: true,
+        });
+        created = true;
+      }
+    }
+    if (!user.isActive) throw new AppError('Conta desativada', 401);
+
+    await repo.updateUser(user.id, { lastLoginAt: new Date() });
+    return { user: publicUser(user), created, ...(await issueTokens(user)) };
   },
 
   // Rotação de refresh token com detecção de reuso
@@ -166,19 +212,25 @@ export const authService = {
     return publicUser(user);
   },
 
-  // Troca de senha logado: derruba as outras sessões e devolve tokens novos para esta
+  // Troca de senha logado: derruba as outras sessões e devolve tokens novos para esta.
+  // Conta só Google (sem senha) define aqui a primeira senha, sem a atual.
   async changePassword(userId, { currentPassword, password }) {
     const user = await findActiveUser(userId);
-    await assertPassword(user, currentPassword);
+    if (user.passwordHash) await assertPassword(user, currentPassword);
     await repo.updateUser(userId, { passwordHash: await bcrypt.hash(password, BCRYPT_COST) });
     await repo.revokeAllRefreshTokens(userId);
     return issueTokens(user);
   },
 
-  // Exclusão da própria conta (confirmada com a senha)
-  async deleteAccount(userId, password) {
+  // Exclusão da própria conta: confirmada com a senha ou, em conta só Google, com o e-mail
+  async deleteAccount(userId, { password, confirmEmail }) {
     const user = await findActiveUser(userId);
-    await assertPassword(user, password);
+    if (user.passwordHash) {
+      if (!password) throw new AppError('Informe a senha', 400, { password: ['Obrigatório'] });
+      if (!(await bcrypt.compare(password, user.passwordHash))) throw new AppError('Senha incorreta', 401);
+    } else if (confirmEmail !== user.email) {
+      throw new AppError('Digite o e-mail da conta para confirmar', 400, { confirmEmail: ['E-mail diferente'] });
+    }
     await usersService.softDelete(userId);
   },
 };

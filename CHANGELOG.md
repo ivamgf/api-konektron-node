@@ -1,5 +1,20 @@
 # Changelog
 
+## 5.1.0 — 2026-10-18
+
+### Adicionado
+- **Login com Google** (UC002 A1): `POST /auth/google` recebe o ID token do botão do Google e confere a
+  assinatura com `google-auth-library`. Entra pela conta vinculada; senão vincula a conta com o mesmo e-mail
+  (verificado pelo Google); senão cria a conta sem senha, com e-mail verificado, após o aceite dos Termos
+  (422 com `details.acceptTerms` até lá). Nova variável `GOOGLE_CLIENT_ID`; vazia, a rota responde 503.
+- `hasPassword` e `googleLinked` no usuário (`/auth/me`, login e cadastro).
+- Audit log `auth.login_google` e `auth.register_google`; o resumo do admin conta os logins pelo Google.
+
+### Alterado
+- `POST /auth/change-password`: `currentPassword` só é exigida quando a conta tem senha (conta só Google
+  define a primeira senha).
+- `DELETE /auth/me`: conta só Google confirma com `confirmEmail` em vez da senha.
+
 ## 5.0.0 — 2026-10-16
 
 ### Adicionado

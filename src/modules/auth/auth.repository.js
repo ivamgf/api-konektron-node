@@ -3,6 +3,7 @@ import { db } from '#database/connection.js';
 export const authRepository = {
   findUserByEmail: (email) => db('users').where({ email }).whereNull('deletedAt').first(),
   findUserById: (id) => db('users').where({ id }).whereNull('deletedAt').first(),
+  findUserByGoogleId: (googleId) => db('users').where({ googleId }).whereNull('deletedAt').first(),
 
   createUserWithProfile: (data) =>
     db.transaction(async (trx) => {

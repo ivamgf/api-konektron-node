@@ -20,6 +20,16 @@ export const authController = {
     res.json(result);
   },
 
+  async google(req, res) {
+    const result = await authService.googleLogin(req.validated.body);
+    await audit({
+      userId: result.user.id,
+      action: result.created ? 'auth.register_google' : 'auth.login_google',
+      req,
+    });
+    res.status(result.created ? 201 : 200).json(result);
+  },
+
   async refresh(req, res) {
     res.json(await authService.refresh(req.validated.body.refreshToken));
   },
@@ -58,7 +68,7 @@ export const authController = {
   },
 
   async deleteAccount(req, res) {
-    await authService.deleteAccount(req.user.id, req.validated.body.password);
+    await authService.deleteAccount(req.user.id, req.validated.body);
     await audit({ userId: req.user.id, action: 'auth.account_delete', req });
     res.status(204).end();
   },
