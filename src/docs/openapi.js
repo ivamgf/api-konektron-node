@@ -22,6 +22,7 @@ import * as ct from '#modules/contact/contact.schemas.js';
 import * as fp from '#modules/function-points/fp.schemas.js';
 import { WEIGHTS } from '#modules/function-points/fp.rules.js';
 import * as sc from '#modules/scrum/scrum.schemas.js';
+import * as dd from '#modules/data-diagnosis/dataDiagnosis.schemas.js';
 
 // Especificação OpenAPI 3.1 gerada a partir dos schemas Zod usados na validação:
 // corpos, filtros, limites e enums nunca divergem do código. Ao criar uma rota nova,
@@ -359,6 +360,14 @@ add('patch', '/projects/{projectId}', {
   body: projects.updateProjectSchema, errors: [400], response: ref('Project'),
 });
 add('delete', '/projects/{projectId}', { tag: T_PROJ, summary: 'Excluir projeto (soft delete)', status: 204 });
+add('post', '/projects/{projectId}/ai-usage', {
+  tag: T_PROJ, summary: 'Registrar o uso de IA num campo do projeto',
+  description:
+    'O texto é gerado no navegador, com a conta de IA do próprio usuário (a chave nunca chega a esta API). ' +
+    'Esta rota só grava na auditoria (`project.ai_text`) o campo, o modo e o provedor/modelo, sem o texto.',
+  body: dd.aiUsageSchema, status: 204,
+  example: { feature: 'Gerar: Descrição', mode: 'api', provider: 'anthropic', model: 'claude-opus-5-5' },
+});
 add('get', '/engineering/sections', {
   tag: T_PROJ, summary: 'Catálogo de seções (RF6)',
   description:
@@ -704,6 +713,32 @@ crud(`${SC}/events`, {
   example: { type: 'retrospective', date: '2026-11-13', wentWell: 'Pareamento', toImprove: 'Estimativas', actionItems: 'Planning poker' },
 });
 
+// ---------- Diagnóstico de dados ----------
+const T_DD = 'Diagnóstico de dados';
+const DD = '/projects/{projectId}/data-diagnosis';
+add('get', DD, {
+  tag: T_DD, summary: 'Visão geral', description: 'Inventários, relatórios e planos do projeto, sem o conteúdo.',
+  errors: anySection,
+  response: object({
+    inventories: arrayOf(ref('DdSummary')), reports: arrayOf(ref('DdSummary')), plans: arrayOf(ref('DdSummary')),
+  }),
+});
+crud(`${DD}/inventories`, {
+  tag: T_DD, name: 'DdInventory', label: 'inventário preliminar', plural: 'inventários preliminares das bases e sistemas',
+  schema: dd.inventorySchema, errors: anySection,
+  example: { title: 'Inventário da Diretoria Financeira', content: { systems: [{ code: 'S01', name: 'ERP', criticality: 'high' }] } },
+});
+crud(`${DD}/reports`, {
+  tag: T_DD, name: 'DdReport', label: 'relatório de diagnóstico', plural: 'relatórios de diagnóstico das fontes e fluxos de dados',
+  schema: dd.reportSchema, errors: anySection,
+  example: { title: 'Diagnóstico de dados 2026', content: { maturity: { flows: { level: 2, target: 3, weight: 2 } } } },
+});
+crud(`${DD}/plans`, {
+  tag: T_DD, name: 'DdPlan', label: 'plano de implantação', plural: 'planos de trabalho para implantação de sistema',
+  schema: dd.planSchema, errors: anySection,
+  example: { title: 'Implantação do novo ERP', content: { identification: { system: 'ERP 2.0', budget: 250000 } } },
+});
+
 // ---------- Kanban ----------
 const T_KB = 'Kanban';
 const KB = '/projects/{projectId}/kanban';
@@ -947,6 +982,10 @@ const schemas = {
     velocity: arrayOf(object({ number: { type: 'integer' }, committed: { type: 'integer' }, done: { type: 'integer' } })),
     averageVelocity: nullable({ type: 'number' }), currentSprint: nullable({ type: 'object' }),
   }),
+  DdSummary: object({ id: uuid, title: { type: 'string' }, version: { type: 'string' }, createdAt: dateTime, updatedAt: dateTime }),
+  DdInventory: entity(dd.inventorySchema, { projectId: uuid }),
+  DdReport: entity(dd.reportSchema, { projectId: uuid }),
+  DdPlan: entity(dd.planSchema, { projectId: uuid }),
   KanbanColumn: entity(kb.columnSchema, { projectId: uuid, position: { type: 'integer' } }),
   KanbanCard: entity(kb.cardSchema, {
     projectId: uuid, position: { type: 'integer' },
@@ -1004,6 +1043,7 @@ export function buildOpenApi() {
       { name: T_SC, description: 'Scrum: dados gerais, papéis, Product/Sprint Backlog, sprints, tasks e eventos. Qualquer tipo de projeto.' },
       { name: T_CT, description: 'Formulário de contato (público) e caixa de mensagens do admin.' },
       { name: T_KB, description: 'Quadro de tarefas com colunas e cartões. Qualquer tipo de projeto.' },
+      { name: T_DD, description: 'Inventário preliminar das bases e sistemas, relatório de diagnóstico das fontes e fluxos de dados (com avaliação de maturidade) e plano de trabalho para implantação de sistema. Qualquer tipo de projeto.' },
     ],
     paths,
     components: {
