@@ -11,6 +11,8 @@ import bpmRoutes from '#modules/bpm/bpm.routes.js';
 import commonkadsRoutes from '#modules/commonkads/commonkads.routes.js';
 import fpRoutes from '#modules/function-points/fp.routes.js';
 import scrumRoutes from '#modules/scrum/scrum.routes.js';
+import dataDiagnosisRoutes from '#modules/data-diagnosis/dataDiagnosis.routes.js';
+import { aiUsageSchema } from '#modules/data-diagnosis/dataDiagnosis.schemas.js';
 import { createProjectSchema, listQuery, updateProjectSchema } from './projects.schemas.js';
 import { projectsService as s } from './projects.service.js';
 
@@ -39,6 +41,20 @@ router.delete('/:projectId', loadProject(), async (req, res) => {
   res.status(204).end();
 });
 
+// Uso de IA num campo do projeto (a geração acontece no navegador, com a conta do usuário):
+// fica só o registro na auditoria, sem o texto e sem a chave
+router.post('/:projectId/ai-usage', loadProject(), validate({ body: aiUsageSchema }), async (req, res) => {
+  const { feature, mode, provider, model } = req.validated.body;
+  const via = [provider, model].filter(Boolean).join('/');
+  await audit({
+    userId: req.user.id,
+    action: 'project.ai_text',
+    description: `${req.project.id} · ${mode}${via ? ` · ${via}` : ''} · ${feature}`.slice(0, 1000),
+    req,
+  });
+  res.status(204).end();
+});
+
 // Módulos por tipo de projeto
 router.use('/:projectId/system-analysis', systemAnalysisRoutes);
 router.use('/:projectId/crisp-dm', crispdmRoutes);
@@ -49,5 +65,6 @@ router.use('/:projectId/bpm', bpmRoutes);
 router.use('/:projectId/commonkads', commonkadsRoutes);
 router.use('/:projectId/scrum', scrumRoutes);
 router.use('/:projectId/kanban', kanbanRoutes);
+router.use('/:projectId/data-diagnosis', dataDiagnosisRoutes);
 
 export default router;

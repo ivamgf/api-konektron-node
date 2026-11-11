@@ -30,6 +30,7 @@ src/
     ├── function-points/  contagem de Pontos de Função IFPUG (projetos de software)
     ├── scrum/        papéis, backlogs, sprints, tasks e eventos (qualquer projeto)
     ├── kanban/       quadro de tarefas (qualquer projeto)
+    ├── data-diagnosis/ inventário, relatório de diagnóstico e plano de implantação (qualquer projeto)
     ├── contact/      formulário de contato e caixa de mensagens do admin
     └── engineering/  RF6 — catálogo de seções (as não implementadas respondem 501)
 ```
@@ -259,6 +260,22 @@ Qualquer tipo de projeto (migration 000010).
 O PATCH de cartão não muda coluna nem posição: use `/move`. Excluir uma coluna exclui
 seus cartões. Colunas aceitam `taskStatus` e cartões publicados pelo Scrum trazem `scrumTaskId`,
 `taskStatus`, `sprintId`, `sprintNumber` e `itemCode` (ver Scrum ↔ Kanban acima).
+
+### Diagnóstico de dados — `/projects/:projectId/data-diagnosis`
+
+Qualquer tipo de projeto (migration 000023). Três documentos por projeto, cada um com `title`, `version` e as seções
+do modelo em `content` (jsonb, validado em `dataDiagnosis.schemas.js`; o PATCH substitui o `content` inteiro).
+
+| Método | Rota | Observação |
+|---|---|---|
+| GET | / | `{ inventories, reports, plans }` sem o conteúdo |
+| CRUD | /inventories | Inventário Preliminar das Bases e Sistemas: sistemas, bases, integrações, pendências e próximos passos |
+| CRUD | /reports | Relatório de Diagnóstico das Fontes e Fluxos de Dados, com `maturity` (nível e alvo de 1 a 5, peso e evidências por dimensão) |
+| CRUD | /plans | Plano de Trabalho para Implantação de Sistema: fases, atividades, equipe, RACI, riscos, go-live e aprovações |
+
+`POST /projects/:projectId/ai-usage` `{ feature, mode: api|assistant, provider?, model? }` só grava na auditoria
+(`project.ai_text`) que um campo usou IA. A geração acontece no navegador, com a conta do usuário; a API não recebe
+nem o texto nem a chave.
 
 `content` de cada fase guarda as saídas das tarefas do guia CRISP-DM 1.0
 (ex.: `background`, `dataQualityReport`, `testDesign`, `decision`). O PATCH faz *merge*:

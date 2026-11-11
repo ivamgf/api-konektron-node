@@ -12,12 +12,13 @@ export const SECTIONS = Object.freeze({
   CRISP_DM: 'crisp-dm',
   SCRUM: 'scrum',
   KANBAN: 'kanban',
+  DATA_DIAGNOSIS: 'data-diagnosis',
 });
 
 // Seções já implementadas na API (as demais respondem 501)
 export const IMPLEMENTED_SECTIONS = Object.freeze([
   SECTIONS.SYSTEM_ANALYSIS, SECTIONS.ONTOLOGIES, SECTIONS.BPM, SECTIONS.FUNCTION_POINT, SECTIONS.COMMONKADS,
-  SECTIONS.CRISP_DM, SECTIONS.SCRUM, SECTIONS.KANBAN,
+  SECTIONS.CRISP_DM, SECTIONS.SCRUM, SECTIONS.KANBAN, SECTIONS.DATA_DIAGNOSIS,
 ]);
 
 // Tipo de projeto exigido por seção; as ausentes (Ontologias, BPM, CommonKADS, Scrum, Kanban) servem a qualquer tipo

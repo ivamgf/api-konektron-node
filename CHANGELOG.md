@@ -1,5 +1,19 @@
 # Changelog
 
+## 5.2.0 — 2026-11-11
+
+### Adicionado
+- **Seção "Diagnóstico de dados"** (`data-diagnosis`, qualquer tipo de projeto), com três documentos por projeto em
+  `/projects/:projectId/data-diagnosis`: `inventories` (Inventário Preliminar das Bases e Sistemas), `reports`
+  (Relatório de Diagnóstico das Fontes e Fluxos de Dados) e `plans` (Plano de Trabalho para Implantação de Sistema).
+  CRUD pelo `crudRouter`; `GET /` lista os três tipos sem o conteúdo. Cada documento guarda as seções do modelo em
+  `content` (jsonb), validado por Zod: sistemas, bases, integrações e pendências; fontes, fluxos, qualidade (1 a 5 por
+  dimensão), governança/LGPD, problemas, plano de ação e **avaliação de maturidade** (nível atual e alvo de 1 a 5,
+  peso e evidências para fontes, fluxos, qualidade, governança e uso); fases, atividades, equipe, RACI, riscos,
+  comunicação, checklist de go-live e aprovações. Migration 000023 (`dd_inventories`, `dd_reports`, `dd_plans`).
+- `POST /projects/:projectId/ai-usage`: o app gera textos com a conta de IA do próprio usuário, direto do navegador;
+  a API só registra na auditoria (`project.ai_text`) o campo, o modo e o provedor/modelo — nunca o texto nem a chave.
+
 ## 5.1.0 — 2026-10-18
 
 ### Adicionado
