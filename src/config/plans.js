@@ -31,16 +31,15 @@ export const SECTION_PROJECT_TYPE = Object.freeze({
   [SECTIONS.CRISP_DM]: 'data_analysis',
 });
 
-// "Análise" é a seção de análise do tipo do projeto: Análise de Sistemas (software) ou CRISP-DM (dados)
-const ANALYSIS = [SECTIONS.SYSTEM_ANALYSIS, SECTIONS.CRISP_DM];
+// CRISP-DM (análise de projetos de dados) é exclusivo do Master
 export const PLAN_SECTIONS = Object.freeze({
-  [PLANS.FREE]: Object.freeze([...ANALYSIS, SECTIONS.SCRUM, SECTIONS.KANBAN]),
-  [PLANS.STANDARD]: Object.freeze([...ANALYSIS, SECTIONS.BPM, SECTIONS.SCRUM, SECTIONS.KANBAN, SECTIONS.FUNCTION_POINT]),
+  [PLANS.FREE]: Object.freeze([SECTIONS.SYSTEM_ANALYSIS, SECTIONS.SCRUM, SECTIONS.KANBAN]),
+  [PLANS.STANDARD]: Object.freeze([SECTIONS.SYSTEM_ANALYSIS, SECTIONS.BPM, SECTIONS.SCRUM, SECTIONS.KANBAN, SECTIONS.FUNCTION_POINT]),
   [PLANS.MASTER]: Object.freeze(Object.values(SECTIONS)),
 });
 
-// Mensalidade em centavos (R$ 79,90 e R$ 179,00)
-export const PLAN_PRICES = Object.freeze({ [PLANS.STANDARD]: 7990, [PLANS.MASTER]: 17900 });
+// Mensalidade em centavos (R$ 49,90 e R$ 79,90)
+export const PLAN_PRICES = Object.freeze({ [PLANS.STANDARD]: 4990, [PLANS.MASTER]: 7990 });
 
 // Free: projetos que a conta pode criar (excluir não devolve a vaga) e meses sem uso até a exclusão
 export const FREE_PROJECT_LIMIT = 3;

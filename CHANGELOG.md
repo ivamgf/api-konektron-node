@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.5.0 — 2026-11-12
+
+### Alterado
+- **Novos preços**: Standard R$ 49,90/mês e Master R$ 79,90/mês (`PLAN_PRICES`). Vale para novas assinaturas;
+  as já criadas no Asaas mantêm o valor contratado.
+- **CRISP-DM só no Master**: a seção sai do Free e do Standard.
+
 ## 5.4.0 — 2026-11-12
 
 ### Adicionado

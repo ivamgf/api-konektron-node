@@ -242,9 +242,9 @@ Teste do e-mail: `npm run mail:test [-- destino]` confere o SMTP e envia uma men
 
 | Plano | Preço | Seções | Projetos |
 |---|---|---|---|
-| `free` | grátis | análise (Análise de Sistemas ou CRISP-DM), Scrum, Kanban | até 3 na vida da conta (excluir não libera a vaga); sem uso por 3 meses, são excluídos |
-| `standard` | R$ 79,90/mês | + BPM e Pontos de Função | ilimitados |
-| `master` | R$ 179,00/mês | todas | ilimitados |
+| `free` | grátis | Análise de Sistemas, Scrum, Kanban | até 3 na vida da conta (excluir não libera a vaga); sem uso por 3 meses, são excluídos |
+| `standard` | R$ 49,90/mês | + BPM e Pontos de Função | ilimitados |
+| `master` | R$ 79,90/mês | todas (inclui CRISP-DM) | ilimitados |
 
 Todos com a integração com IA. Seção fora do plano responde **403** com `details.plans`. O plano é lido no banco a
 cada requisição (assinar ou voltar ao Free vale na hora, sem esperar o token).
