@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import { authenticate } from '#middlewares/authenticate.js';
-import { requireSection } from '#middlewares/authorize.js';
+import { currentAccount, requireSection } from '#middlewares/authorize.js';
 import {
   canAccessSection,
   IMPLEMENTED_SECTIONS,
+  plansWithSection,
   SECTION_PROJECT_TYPE,
   SECTIONS,
 } from '#config/plans.js';
@@ -12,13 +13,15 @@ import {
 const router = Router();
 router.use(authenticate);
 
-router.get('/sections', (req, res) => {
+router.get('/sections', async (req, res) => {
+  const account = await currentAccount(req);
   res.json(
     Object.values(SECTIONS).map((key) => {
       const implemented = IMPLEMENTED_SECTIONS.includes(key);
       return {
         key,
-        enabled: canAccessSection(req.user, key),
+        enabled: canAccessSection(account, key),
+        plans: plansWithSection(key),
         implemented,
         projectType: SECTION_PROJECT_TYPE[key] ?? null,
         route: implemented ? `/api/v1/projects/:projectId/${key}` : null,

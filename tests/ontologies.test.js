@@ -38,9 +38,10 @@ const TURTLE = `@prefix : <https://ex.com/agenda#> .
 :ana a owl:NamedIndividual , :Cliente .
 `;
 
-test('Ontologias: implementada e liberada no Free', () => {
+test('Ontologias: implementada, só no plano Master', () => {
   assert.ok(IMPLEMENTED_SECTIONS.includes(SECTIONS.ONTOLOGIES));
-  assert.ok(canAccessSection({ role: 'client', plan: 'free' }, SECTIONS.ONTOLOGIES));
+  assert.ok(!canAccessSection({ role: 'client', plan: 'standard' }, SECTIONS.ONTOLOGIES));
+  assert.ok(canAccessSection({ role: 'client', plan: 'master' }, SECTIONS.ONTOLOGIES));
 });
 
 test('analisador: RDF/XML com IRI, versão, vocabulários e contagens sem duplicar', () => {

@@ -48,6 +48,17 @@ const schema = z
     MAIL_FROM: z.string().optional(),
     // destino das mensagens do formulário de contato (vazio: as mensagens só ficam no banco)
     CONTACT_EMAIL: z.preprocess((v) => (typeof v === 'string' && !v.trim() ? undefined : v), z.email().optional()),
+    // Asaas (assinaturas Standard e Master). Sem ASAAS_API_KEY a cobrança fica desligada.
+    ASAAS_API_URL: z.url().default('https://api-sandbox.asaas.com/v3'),
+    ASAAS_API_KEY: z.preprocess((v) => (typeof v === 'string' && !v.trim() ? undefined : v), z.string().trim().optional()),
+    // token que o Asaas manda no header asaas-access-token dos webhooks (32 a 255 caracteres)
+    ASAAS_WEBHOOK_TOKEN: z.preprocess(
+      (v) => (typeof v === 'string' && !v.trim() ? undefined : v),
+      z.string().trim().min(32).max(255).optional(),
+    ),
+    ASAAS_WALLET_ID: z.preprocess((v) => (typeof v === 'string' && !v.trim() ? undefined : v), z.string().trim().optional()),
+    // dias de atraso tolerados antes de a conta voltar ao Free
+    ASAAS_TOLERANCE_DAYS: z.coerce.number().int().min(0).max(60).default(5),
     CORS_ORIGINS: z.string().default(''),
     DOCS_ENABLED: z.enum(['true', 'false']).default('true'),
   })

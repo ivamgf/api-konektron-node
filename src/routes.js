@@ -10,6 +10,7 @@ import userRoutes from '#modules/users/users.routes.js';
 import logRoutes from '#modules/logs/logs.routes.js';
 import projectRoutes from '#modules/projects/projects.routes.js';
 import engineeringRoutes from '#modules/engineering/engineering.routes.js';
+import billingRoutes from '#modules/billing/billing.routes.js';
 import { contactAdminRouter, contactRouter } from '#modules/contact/contact.routes.js';
 
 const router = Router();
@@ -45,6 +46,7 @@ router.use('/admin/contact-messages', contactAdminRouter);
 router.use('/contact', contactRouter);
 router.use('/projects', projectRoutes);
 router.use('/engineering', engineeringRoutes);
+router.use('/billing', billingRoutes);
 if (docsEnabled) router.use('/docs', docsRoutes);
 
 export default router;
