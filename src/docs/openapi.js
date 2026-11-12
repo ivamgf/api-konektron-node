@@ -904,6 +904,7 @@ const schemas = {
   Address: entity(addressSchema, { userId: uuid }),
   AdminUser: object({
     ...adminUserBase,
+    lifetime: { type: 'boolean', description: 'Master vitalício: plano Master sem cobrança, concedido pelo administrador' },
     isActive: { type: 'boolean' },
     emailVerifiedAt: nullable(dateTime),
     lastLoginAt: nullable(dateTime),

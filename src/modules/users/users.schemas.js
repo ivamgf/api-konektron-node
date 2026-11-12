@@ -17,4 +17,6 @@ export const adminUpdateSchema = z.object({
   role: role.optional(),
   plan: plan.optional(),
   isActive: z.boolean().optional(),
+  // Master vitalício: plano Master sem cobrança (só o administrador concede; não é divulgado no sistema)
+  lifetime: z.boolean().optional(),
 });

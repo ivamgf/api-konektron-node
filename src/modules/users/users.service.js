@@ -3,7 +3,7 @@ import { isMasterAdmin } from '#config/plans.js';
 import { AppError } from '#utils/AppError.js';
 import { billingService } from '#modules/billing/billing.service.js';
 
-const COLUMNS = ['id', 'email', 'role', 'plan', 'isActive', 'emailVerifiedAt', 'lastLoginAt', 'createdAt'];
+const COLUMNS = ['id', 'email', 'role', 'plan', 'lifetime', 'isActive', 'emailVerifiedAt', 'lastLoginAt', 'createdAt'];
 const active = () => db('users').whereNull('deletedAt');
 const revokeSessions = (userId) =>
   db('refresh_tokens').where({ userId }).whereNull('revokedAt').update({ revokedAt: db.fn.now() });
@@ -51,11 +51,14 @@ export const usersService = {
   async update(id, data, actorId) {
     if (!Object.keys(data).length) throw new AppError('Nenhum campo para atualizar', 400);
     // o administrador não pode tirar o próprio acesso à administração (papel, plano Master ou conta ativa)
-    if (id === actorId && (data.role || data.plan || data.isActive === false)) {
+    if (id === actorId && (data.role || data.plan || data.isActive === false || data.lifetime === false)) {
       throw new AppError('Você não pode alterar o próprio perfil ou desativar a própria conta', 400);
     }
-    const before = await active().where({ id }).first('role', 'plan');
+    const before = await active().where({ id }).first('role', 'plan', 'lifetime');
     if (!before) throw AppError.notFound('Usuário');
+    // vitalício é sempre Master; quem tinha assinatura para de ser cobrado
+    if (data.lifetime === true || (before.lifetime && data.lifetime !== false)) data.plan = 'master';
+    if (data.lifetime === true && !before.lifetime) await billingService.cancelAllForUser(id);
     const [user] = await active().where({ id }).update(data).returning(COLUMNS);
     if (!user) throw AppError.notFound('Usuário');
     // o perfil novo chega ao token na próxima renovação; quem perdeu a administração (ou foi desativado) sai na hora

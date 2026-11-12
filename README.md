@@ -277,7 +277,9 @@ de um Free. Projetos compartilhados não contam na cota de quem recebe.
 
 ### Perfis e administração
 
-Todo cadastro novo começa `client`/`free`. O administrador também pode mudar o perfil em
+Todo cadastro novo começa `client`/`free`. O administrador pode conceder o **Master vitalício** (`lifetime`): plano
+Master sem cobrança, que não aparece nas páginas públicas. Administradores e vitalícios nunca são cobrados.
+O administrador também pode mudar o perfil em
 `PATCH /admin/users/:id` (`role`, `plan`); em contas com assinatura, a próxima atualização da cobrança regrava o plano. As rotas `/admin/*` (usuários, logs, mensagens) e o acesso a
 projetos de outros usuários são exclusivos de quem tem papel `admin` **e** plano `master`; o middleware
 `requireMasterAdmin` confere isso no banco a cada requisição, então um rebaixamento vale na hora. A migration
