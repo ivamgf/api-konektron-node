@@ -76,7 +76,7 @@ test('arrependimento: 7 dias do 1º pagamento', () => {
 
 test('catálogo: três planos com preço, seções e IA', () => {
   const c = catalog();
-  assert.deepEqual(c.plans.map((p) => [p.plan, p.amount]), [['free', 0], ['standard', 7990], ['master', 17900]]);
+  assert.deepEqual(c.plans.map((p) => [p.plan, p.amount]), [['free', 0], ['standard', 4990], ['master', 7990]]);
   assert.ok(c.plans.every((p) => p.ai));
   assert.equal(c.plans[0].projectLimit, 3);
 });

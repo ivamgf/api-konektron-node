@@ -13,7 +13,7 @@ const client = (plan) => ({ role: ROLES.CLIENT, plan });
 test('Free: análise (sistemas ou dados), Scrum e Kanban', () => {
   assert.deepEqual(
     [...PLAN_SECTIONS.free].sort(),
-    [SECTIONS.SYSTEM_ANALYSIS, SECTIONS.CRISP_DM, SECTIONS.SCRUM, SECTIONS.KANBAN].sort(),
+    [SECTIONS.SYSTEM_ANALYSIS, SECTIONS.SCRUM, SECTIONS.KANBAN].sort(),
   );
   for (const s of [SECTIONS.BPM, SECTIONS.FUNCTION_POINT, SECTIONS.ONTOLOGIES, SECTIONS.COMMONKADS, SECTIONS.DATA_DIAGNOSIS]) {
     assert.ok(!canAccessSection(client(PLANS.FREE), s), s);
@@ -23,7 +23,7 @@ test('Free: análise (sistemas ou dados), Scrum e Kanban', () => {
 test('Standard: análise, BPM, Scrum, Kanban e Pontos de Função', () => {
   assert.deepEqual(
     [...PLAN_SECTIONS.standard].sort(),
-    [SECTIONS.SYSTEM_ANALYSIS, SECTIONS.CRISP_DM, SECTIONS.BPM, SECTIONS.SCRUM, SECTIONS.KANBAN, SECTIONS.FUNCTION_POINT].sort(),
+    [SECTIONS.SYSTEM_ANALYSIS, SECTIONS.BPM, SECTIONS.SCRUM, SECTIONS.KANBAN, SECTIONS.FUNCTION_POINT].sort(),
   );
   assert.ok(!canAccessSection(client(PLANS.STANDARD), SECTIONS.ONTOLOGIES));
 });
@@ -32,9 +32,9 @@ test('Master: acesso total', () => {
   for (const s of Object.values(SECTIONS)) assert.ok(canAccessSection(client(PLANS.MASTER), s), s);
 });
 
-test('preços: Standard R$ 79,90 e Master R$ 179,00 (centavos)', () => {
-  assert.equal(PLAN_PRICES.standard, 7990);
-  assert.equal(PLAN_PRICES.master, 17900);
+test('preços: Standard R$ 49,90 e Master R$ 79,90 (centavos)', () => {
+  assert.equal(PLAN_PRICES.standard, 4990);
+  assert.equal(PLAN_PRICES.master, 7990);
 });
 
 test('planos que incluem cada seção', () => {
