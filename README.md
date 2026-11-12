@@ -99,9 +99,11 @@ Web, com o domínio do app em "Origens JavaScript autorizadas"); vazio, a rota r
 
 | Método | Rota | Observação |
 |---|---|---|
-| GET · POST | /projects | `type`: `software` (padrão) ou `data_analysis` |
-| GET · PATCH · DELETE | /projects/:projectId | o tipo não muda após criado |
-| GET | /engineering/sections | seções, se estão liberadas (todas) e implementadas |
+| GET · POST | /projects | `type`: `software` (padrão) ou `data_analysis`; a lista traz os compartilhados comigo (`scope`), `access`, `purgeAt` e a `quota` do Free |
+| GET · PATCH · DELETE | /projects/:projectId | o GET traz `access` e `sections` (as que quem pede usa no projeto); PATCH e DELETE só o dono |
+| GET · POST | /projects/:projectId/members | participantes; o dono convida pelo e-mail com `access` `project` ou `kanban` |
+| PATCH · DELETE | /projects/:projectId/members/:memberId | o dono muda o acesso ou remove; o participante pode sair |
+| GET | /engineering/sections | seções, se estão no plano do usuário (`plans`: planos que as incluem) e implementadas |
 
 ### Análise de Sistemas — `/projects/:projectId/system-analysis`
 
@@ -236,11 +238,47 @@ fica no banco (migration 000016) e, com `CONTACT_EMAIL` definido, também vai po
 
 Teste do e-mail: `npm run mail:test [-- destino]` confere o SMTP e envia uma mensagem de teste (padrão: `CONTACT_EMAIL`).
 
+### Planos e cobrança (Asaas) — `/billing`
+
+| Plano | Preço | Seções | Projetos |
+|---|---|---|---|
+| `free` | grátis | análise (Análise de Sistemas ou CRISP-DM), Scrum, Kanban | até 3 na vida da conta (excluir não libera a vaga); sem uso por 3 meses, são excluídos |
+| `standard` | R$ 79,90/mês | + BPM e Pontos de Função | ilimitados |
+| `master` | R$ 179,00/mês | todas | ilimitados |
+
+Todos com a integração com IA. Seção fora do plano responde **403** com `details.plans`. O plano é lido no banco a
+cada requisição (assinar ou voltar ao Free vale na hora, sem esperar o token).
+
+| Método | Rota | Observação |
+|---|---|---|
+| GET | /billing/plans | público: preços, seções e limites |
+| GET | /billing/subscription | assinatura atual, fatura em aberto e histórico |
+| POST | /billing/subscribe | `{ plan, cpfCnpj, acceptTerms: true }`: cria cliente e assinatura mensal no Asaas e devolve `invoiceUrl` (Pix, boleto ou cartão) |
+| POST | /billing/subscription/refresh | relê as cobranças no Asaas sem esperar o webhook |
+| POST | /billing/subscription/cancel | para a cobrança; o plano segue até o fim do período pago. Em até 7 dias do 1º pagamento, estorna e encerra na hora (CDC art. 49) |
+| POST | /billing/webhooks/asaas | avisos do Asaas, autenticados pelo header `asaas-access-token` |
+
+Cada pagamento confirmado cobre um mês a partir do vencimento (`paid_until`). O plano do usuário é o maior entre as
+assinaturas com acesso. Na troca para um plano maior, a nova cobrança vence hoje; para um menor, começa no fim do
+período pago. Uma rotina horária (em `server.js`) rebaixa quem passou de `ASAAS_TOLERANCE_DAYS` (5) de atraso ou
+chegou ao fim do período de uma assinatura cancelada, e exclui os projetos do Free sem uso há 3 meses.
+
+Configuração: `ASAAS_API_URL` (sandbox ou produção), `ASAAS_API_KEY`, `ASAAS_WEBHOOK_TOKEN` (32+ caracteres),
+`ASAAS_WALLET_ID`, `ASAAS_TOLERANCE_DAYS`. Cadastre o webhook com `npm run asaas:webhook` (exige `API_URL` HTTPS
+pública). A conta Asaas pode ser a mesma de outros sistemas (ex.: Konektron Research): tudo o que esta API cria leva
+`externalReference` com o prefixo `konektron:`, e o webhook ignora (com 200) avisos de assinaturas que não são daqui.
+
+### Compartilhamento de projetos
+
+O dono convida contas ativas pelo e-mail para o projeto inteiro (`project`) ou só para o Kanban (`kanban`). Só o
+dono (ou o administrador Master) altera, exclui ou compartilha o projeto. O participante só entra nas seções que estão
+no plano dele **e** no do dono: um Free não usa o BPM do projeto de um Standard, e um Master não usa o BPM do projeto
+de um Free. Projetos compartilhados não contam na cota de quem recebe.
+
 ### Perfis e administração
 
-Não há cobrança: todos os planos (`free`, `standard`, `master`) acessam todas as seções, e todo cadastro novo
-começa `client`/`free`. Os perfis continuam distintos no banco; quem os muda é o administrador, em
-`PATCH /admin/users/:id` (`role`, `plan`). As rotas `/admin/*` (usuários, logs, mensagens) e o acesso a
+Todo cadastro novo começa `client`/`free`. O administrador também pode mudar o perfil em
+`PATCH /admin/users/:id` (`role`, `plan`); em contas com assinatura, a próxima atualização da cobrança regrava o plano. As rotas `/admin/*` (usuários, logs, mensagens) e o acesso a
 projetos de outros usuários são exclusivos de quem tem papel `admin` **e** plano `master`; o middleware
 `requireMasterAdmin` confere isso no banco a cada requisição, então um rebaixamento vale na hora. A migration
 000021 removeu as tabelas da antiga integração com o PagBank e deixou todos como Free, exceto o dono do sistema.

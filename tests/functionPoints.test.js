@@ -6,10 +6,11 @@ import { countSchema, functionSchema } from '#modules/function-points/fp.schemas
 import { fpService } from '#modules/function-points/fp.service.js';
 import { buildOpenApi } from '../src/docs/openapi.js';
 
-test('Pontos de Função: implementado, projetos software, liberado no Free', () => {
+test('Pontos de Função: implementado, projetos software, nos planos Standard e Master', () => {
   assert.ok(IMPLEMENTED_SECTIONS.includes(SECTIONS.FUNCTION_POINT));
   assert.equal(SECTION_PROJECT_TYPE[SECTIONS.FUNCTION_POINT], 'software');
-  assert.ok(canAccessSection({ role: 'client', plan: 'free' }, SECTIONS.FUNCTION_POINT));
+  assert.ok(!canAccessSection({ role: 'client', plan: 'free' }, SECTIONS.FUNCTION_POINT));
+  assert.ok(canAccessSection({ role: 'client', plan: 'standard' }, SECTIONS.FUNCTION_POINT));
 });
 
 test('tabela de complexidade ALI/AIE (planilha): TR × TD', () => {

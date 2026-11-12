@@ -1,5 +1,31 @@
 # Changelog
 
+## 5.3.0 — 2026-11-11
+
+### Adicionado
+- **Planos com cobrança pelo Asaas** (`/billing`): Free (grátis), Standard (R$ 79,90/mês) e Master (R$ 179,00/mês),
+  assinaturas mensais com fatura do Asaas (Pix, boleto ou cartão). `POST /billing/subscribe` cria o cliente (CPF/CNPJ)
+  e a assinatura e devolve o link da fatura; webhook `POST /billing/webhooks/asaas` com token e idempotência
+  (`payment_events`); `POST /billing/subscription/refresh` confere sem esperar o webhook; cancelamento com
+  arrependimento em 7 dias (estorno) e acesso até o fim do período pago; troca de plano (maior cobra hoje, menor
+  começa no fim do período). Script `npm run asaas:webhook`.
+- **Seções por plano**: Free tem análise (Análise de Sistemas ou CRISP-DM), Scrum e Kanban; Standard acrescenta BPM e
+  Pontos de Função; Master tem todas. Todos com IA. Seção fora do plano responde 403 com `details.plans`; o plano é
+  lido no banco a cada requisição.
+- **Free**: até 3 projetos na vida da conta (`users.projects_created`; excluir não libera a vaga; 403
+  `project-limit`); projetos sem uso por 3 meses (`projects.last_used_at`) são excluídos pela rotina horária.
+  `GET /projects` traz a `quota` e o `purgeAt` de cada projeto.
+- **Compartilhamento de projetos** (`/projects/:id/members`): o dono convida pelo e-mail com acesso ao projeto
+  inteiro ou só ao Kanban; o participante usa só as seções dos dois planos (dele e do dono). `GET /projects` lista
+  também os compartilhados (`scope`), e `GET /projects/:id` traz `access` e `sections`.
+- Migration 000024 (`subscriptions`, `payments`, `payment_events`, `project_members`, colunas novas em `users` e
+  `projects`), variáveis `ASAAS_*`, OpenAPI, README e testes.
+
+### Alterado
+- PATCH e DELETE do projeto só para o dono (ou administrador Master). Excluir a conta cancela a assinatura no Asaas.
+- A conta Asaas pode ser compartilhada com outros sistemas: o que esta API cria leva `externalReference`
+  `konektron:`, e avisos de outras assinaturas são ignorados sem gravar nada.
+
 ## 5.2.0 — 2026-11-11
 
 ### Adicionado

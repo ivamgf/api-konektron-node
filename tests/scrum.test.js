@@ -7,7 +7,7 @@ import { buildOpenApi } from '../src/docs/openapi.js';
 
 const id = '0b0f6d0e-3c1a-4f6e-9d55-1f2a3b4c5d6e';
 
-test('Scrum: implementado e liberado no Free', () => {
+test('Scrum: implementado e em todos os planos (inclusive o Free)', () => {
   assert.ok(IMPLEMENTED_SECTIONS.includes(SECTIONS.SCRUM));
   assert.ok(canAccessSection({ role: 'client', plan: 'free' }, SECTIONS.SCRUM));
 });

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import pkg from '../../package.json' with { type: 'json' };
-import { PLANS, ROLES } from '#config/plans.js';
+import { FREE_INACTIVE_MONTHS, FREE_PROJECT_LIMIT, PAID_PLANS, PLAN_SECTIONS, PLANS, ROLES } from '#config/plans.js';
+import * as billing from '#modules/billing/billing.schemas.js';
 import * as auth from '#modules/auth/auth.schemas.js';
 import { addressSchema } from '#modules/addresses/addresses.schemas.js';
 import { updateProfileSchema } from '#modules/profiles/profiles.schemas.js';
@@ -79,15 +80,15 @@ function entity(schema, extra = {}) {
 const ERRORS = {
   400: 'Requisição inválida (ex.: nenhum campo para atualizar)',
   401: 'Token ausente, inválido ou expirado (ou credenciais incorretas)',
-  403: 'Sem permissão: área exclusiva do administrador Master',
+  403: 'Sem permissão: seção fora do plano (`details.plans` lista os planos que a incluem), limite de projetos do Free, ação só do dono do projeto ou área do administrador Master',
   404: 'Recurso não encontrado (ou pertence a outro usuário)',
   409: 'Conflito: registro duplicado, em uso ou tipo de projeto incompatível',
   413: 'Arquivo maior que o limite',
   415: 'O arquivo deve ser enviado como application/octet-stream',
   422: 'Dados inválidos; `details` traz os erros por campo',
   429: 'Muitas tentativas; aguarde e tente novamente',
-  502: 'O servidor de e-mail (SMTP) recusou o envio',
-  503: 'Envio de e-mail não configurado (sem SMTP_HOST)',
+  502: 'Um serviço externo recusou o pedido (servidor de e-mail ou de pagamentos)',
+  503: 'Serviço não configurado (sem SMTP_HOST ou sem ASAAS_API_KEY)',
 };
 
 const PATH_PARAMS = {
@@ -96,6 +97,7 @@ const PATH_PARAMS = {
   datasetId: 'ID do dataset',
   modelId: 'ID do modelo',
   countId: 'ID da contagem de pontos de função',
+  memberId: 'ID do participante do projeto',
 };
 
 // Parâmetros de rota que não são uuid
@@ -344,22 +346,51 @@ add('get', '/admin/logs/summary', {
 // ---------- Projetos e seções ----------
 const T_PROJ = 'Projetos';
 add('get', '/projects', {
-  tag: T_PROJ, summary: 'Listar meus projetos', query: projects.listQuery, response: paginated(ref('Project')),
+  tag: T_PROJ, summary: 'Listar meus projetos e os compartilhados comigo', query: projects.listQuery,
+  description:
+    'Cada projeto traz `access` (`owner`, `project` ou `kanban`), `ownerEmail` (nos compartilhados) e `purgeAt` ' +
+    `(quando o dono está no Free: data da exclusão por ${FREE_INACTIVE_MONTHS} meses sem uso). \`quota\` mostra quantos ` +
+    `projetos a conta já criou e se pode criar outro (Free: ${FREE_PROJECT_LIMIT} na vida da conta).`,
+  response: object({ ...paginated(ref('Project')).properties, quota: ref('ProjectQuota') }),
 });
 add('post', '/projects', {
   tag: T_PROJ, summary: 'Criar projeto', status: 201,
   description:
     '`software` (padrão) prepara a seção Análise de Sistemas; `data_analysis` cria as 6 fases do ' +
-    'CRISP-DM.',
+    'CRISP-DM. No Free, a conta cria até ' + FREE_PROJECT_LIMIT + ' projetos (excluir não libera a vaga): depois, **403** ' +
+    'com `details.reason = "project-limit"`.',
+  errors: [403],
   body: projects.createProjectSchema, response: ref('Project'),
   example: { name: 'Sistema de Agendamento', type: 'software', description: 'Agenda web para clínicas.' },
 });
-add('get', '/projects/{projectId}', { tag: T_PROJ, summary: 'Obter projeto', response: ref('Project') });
+add('get', '/projects/{projectId}', {
+  tag: T_PROJ, summary: 'Obter projeto',
+  description: '`sections` lista as seções que quem pede usa neste projeto (plano próprio; num projeto compartilhado, só as que também estão no plano do dono).',
+  response: ref('ProjectDetail'),
+});
 add('patch', '/projects/{projectId}', {
   tag: T_PROJ, summary: 'Atualizar projeto', description: 'O tipo não muda depois de criado.',
-  body: projects.updateProjectSchema, errors: [400], response: ref('Project'),
+  body: projects.updateProjectSchema, errors: [400, 403], response: ref('Project'),
 });
-add('delete', '/projects/{projectId}', { tag: T_PROJ, summary: 'Excluir projeto (soft delete)', status: 204 });
+add('delete', '/projects/{projectId}', { tag: T_PROJ, summary: 'Excluir projeto (soft delete; só o dono)', status: 204, errors: [403] });
+add('get', '/projects/{projectId}/members', {
+  tag: T_PROJ, summary: 'Participantes do projeto', response: object({ owner: ref('ProjectMember'), data: arrayOf(ref('ProjectMember')) }),
+});
+add('post', '/projects/{projectId}/members', {
+  tag: T_PROJ, summary: 'Compartilhar o projeto (só o dono)', status: 201, errors: [403, 409],
+  description:
+    'Convida uma conta ativa pelo e-mail: `project` (o projeto inteiro) ou `kanban` (só o Kanban). O participante só ' +
+    'entra nas seções que estão no plano dele **e** no do dono; `blockedSections` lista as que ficam bloqueadas para ele.',
+  body: projects.addMemberSchema, response: ref('ProjectMember'),
+  example: { email: 'colega@exemplo.com', access: 'kanban' },
+});
+add('patch', '/projects/{projectId}/members/{memberId}', {
+  tag: T_PROJ, summary: 'Mudar o acesso de um participante (só o dono)', errors: [403],
+  body: projects.updateMemberSchema, response: ref('ProjectMember'),
+});
+add('delete', '/projects/{projectId}/members/{memberId}', {
+  tag: T_PROJ, summary: 'Remover participante (o dono) ou sair do projeto (o próprio participante)', status: 204, errors: [403],
+});
 add('post', '/projects/{projectId}/ai-usage', {
   tag: T_PROJ, summary: 'Registrar o uso de IA num campo do projeto',
   description:
@@ -371,10 +402,43 @@ add('post', '/projects/{projectId}/ai-usage', {
 add('get', '/engineering/sections', {
   tag: T_PROJ, summary: 'Catálogo de seções (RF6)',
   description:
-    'Usado pelo front para montar o menu: indica se cada seção está liberada (todas, em qualquer plano), se já ' +
+    'Usado pelo front para montar o menu: indica se cada seção está no plano do usuário (`plans`: planos que a incluem), se já ' +
     'existe na API e o tipo de projeto exigido. Seções não implementadas respondem **501** em ' +
     '`/engineering/{secao}`.',
   response: arrayOf(ref('Section')),
+});
+
+// ---------- Planos e assinaturas ----------
+const T_BILL = 'Planos e assinaturas';
+add('get', '/billing/plans', { tag: T_BILL, summary: 'Planos, preços e seções (público)', auth: false, response: ref('PlanCatalog') });
+add('get', '/billing/subscription', {
+  tag: T_BILL, summary: 'Minha assinatura e faturas',
+  response: object({
+    plan: { type: 'string' }, exempt: { type: 'boolean' }, cpfCnpj: nullable({ type: 'string' }),
+    current: nullable(ref('Subscription')), openInvoiceUrl: nullable({ type: 'string' }), withdrawal: { type: 'boolean' },
+    payments: arrayOf(ref('Payment')),
+  }),
+});
+add('post', '/billing/subscribe', {
+  tag: T_BILL, summary: 'Assinar ou trocar de plano', status: 201, errors: [409, 429, 502, 503],
+  description:
+    'Cria o cliente e a assinatura mensal no Asaas e devolve `invoiceUrl` (fatura com Pix, boleto ou cartão). O plano é ' +
+    'liberado quando o pagamento é confirmado (webhook ou `POST /billing/subscription/refresh`). Na troca para um plano ' +
+    'maior, a nova cobrança vence hoje; para um menor, começa no fim do período já pago. A assinatura anterior para de cobrar.',
+  body: billing.subscribeSchema,
+  example: { plan: 'standard', cpfCnpj: '529.982.247-25', acceptTerms: true },
+  response: object({ subscription: ref('Subscription'), invoiceUrl: nullable({ type: 'string' }), startsAt: nullable({ type: 'string', format: 'date' }) }),
+});
+add('post', '/billing/subscription/refresh', { tag: T_BILL, summary: 'Conferir os pagamentos no Asaas agora', errors: [429, 502] });
+add('post', '/billing/subscription/cancel', {
+  tag: T_BILL, summary: 'Cancelar a assinatura', errors: [429, 502],
+  description: 'Para a cobrança; o plano segue até o fim do período pago. Em até 7 dias do 1º pagamento (arrependimento, CDC art. 49), o pagamento é estornado e o acesso termina na hora.',
+  response: object({ subscription: ref('Subscription'), withdrawal: { type: 'boolean' }, refund: nullable({ type: 'object' }) }),
+});
+add('post', '/billing/webhooks/asaas', {
+  tag: T_BILL, summary: 'Avisos do Asaas (webhook)', auth: false, errors: [401],
+  description: 'Autenticado pelo header `asaas-access-token` (ASAAS_WEBHOOK_TOKEN). Avisos de assinaturas que não são do KonekTron (mesma conta Asaas) são ignorados com 200.',
+  response: object({ received: { type: 'boolean' } }),
 });
 
 // ---------- Análise de Sistemas ----------
@@ -862,10 +926,62 @@ const schemas = {
     projectsByType: arrayOf(object({ type: { type: 'string' }, total: { type: 'integer' } })),
     loginsLast30Days: arrayOf(object({ day: { type: 'string', format: 'date' }, total: { type: 'integer' } })),
   }),
-  Project: entity(projects.createProjectSchema, { ownerId: uuid, deletedAt: nullable(dateTime) }),
+  Project: entity(projects.createProjectSchema, {
+    ownerId: uuid, deletedAt: nullable(dateTime), lastUsedAt: dateTime,
+    access: { type: 'string', enum: ['owner', 'project', 'kanban', 'admin'] },
+    ownerEmail: nullable({ type: 'string' }),
+    purgeAt: nullable(dateTime),
+  }),
+  ProjectDetail: entity(projects.createProjectSchema, {
+    ownerId: uuid, lastUsedAt: dateTime,
+    access: { type: 'string', enum: ['owner', 'project', 'kanban', 'admin'] },
+    ownerEmail: nullable({ type: 'string' }),
+    sections: arrayOf({ type: 'string' }),
+    purgeAt: nullable(dateTime),
+  }),
+  ProjectQuota: object({
+    plan: { type: 'string', enum: Object.values(PLANS) },
+    limit: nullable({ type: 'integer' }),
+    used: { type: 'integer', description: 'Projetos criados na vida da conta (excluídos inclusive)' },
+    canCreate: { type: 'boolean' },
+  }),
+  ProjectMember: object({
+    id: uuid, userId: uuid, email: { type: 'string' }, fullName: nullable({ type: 'string' }),
+    plan: { type: 'string', enum: Object.values(PLANS) },
+    access: { type: 'string', enum: projects.MEMBER_ACCESS },
+    blockedSections: arrayOf({ type: 'string' }),
+    createdAt: dateTime,
+  }),
+  PlanCatalog: object({
+    enabled: { type: 'boolean', description: 'Cobrança on-line ativa (ASAAS_API_KEY definida)' },
+    sandbox: { type: 'boolean' },
+    currency: { type: 'string' },
+    interval: { type: 'string' },
+    plans: arrayOf(object({
+      plan: { type: 'string', enum: Object.values(PLANS) },
+      amount: { type: 'integer', description: 'Centavos por mês' },
+      sections: arrayOf({ type: 'string' }),
+      ai: { type: 'boolean' },
+      projectLimit: nullable({ type: 'integer' }),
+      inactiveMonths: nullable({ type: 'integer' }),
+    })),
+  }),
+  Subscription: object({
+    id: uuid, plan: { type: 'string', enum: PAID_PLANS }, amount: { type: 'integer' },
+    status: { type: 'string', enum: ['pending', 'active', 'overdue', 'canceled'] },
+    nextDueDate: nullable({ type: 'string', format: 'date' }), paidUntil: nullable(dateTime),
+    activatedAt: nullable(dateTime), canceledAt: nullable(dateTime), refundedAt: nullable(dateTime), createdAt: dateTime,
+  }),
+  Payment: object({
+    id: uuid, plan: { type: 'string' }, amount: { type: 'integer' },
+    status: { type: 'string', description: 'Status do Asaas (PENDING, CONFIRMED, RECEIVED, OVERDUE, REFUNDED...)' },
+    billingType: nullable({ type: 'string' }), dueDate: { type: 'string', format: 'date' }, paidAt: nullable(dateTime),
+    invoiceUrl: nullable({ type: 'string' }),
+  }),
   Section: object({
     key: { type: 'string' },
-    enabled: { type: 'boolean', description: 'Liberada para o usuário (todas as seções, em qualquer plano)' },
+    enabled: { type: 'boolean', description: 'Está no plano do usuário' },
+    plans: arrayOf({ type: 'string' }),
     implemented: { type: 'boolean' },
     projectType: nullable({ type: 'string' }),
     route: nullable({ type: 'string' }),
@@ -1015,8 +1131,11 @@ API do KonekTron: engenharia de software e análise de dados.
 - Toda resposta tem o cabeçalho \`X-Request-Id\` (o mesmo valor aparece nos logs).
 - Cadastro, login e rotas de senha têm limite de 20 tentativas a cada 15 min por IP.
 
-## Perfis
-Todos os planos (\`free\`, \`standard\`, \`master\`) acessam todas as seções; todo cadastro novo começa \`free\`.
+## Planos
+${Object.entries(PLAN_SECTIONS).map(([plan, list]) => `- \`${plan}\`: ${list.map((x) => `\`${x}\``).join(', ')}`).join('\n')}
+
+Todos com a integração com IA. Todo cadastro novo começa \`free\` (até ${FREE_PROJECT_LIMIT} projetos; projetos sem uso por ${FREE_INACTIVE_MONTHS} meses são excluídos). Standard e Master são assinaturas mensais pelo Asaas (\`/billing/*\`). Seção fora do plano responde **403**. Projetos podem ser compartilhados pelo dono (projeto inteiro ou só o Kanban).
+
 As rotas \`/admin/*\` são exclusivas de quem tem papel \`admin\` **e** plano \`master\`.
 `.trim();
 
@@ -1033,7 +1152,8 @@ export function buildOpenApi() {
       { name: 'Perfil', description: 'Dados do usuário logado (RF3)' },
       { name: 'Endereços', description: 'Endereços do usuário logado' },
       { name: T_ADMIN, description: 'Somente para papel `admin` com plano `master` (RF5)' },
-      { name: T_PROJ, description: 'Projetos `software` ou `data_analysis` e catálogo de seções' },
+      { name: T_PROJ, description: 'Projetos `software` ou `data_analysis`, compartilhamento e catálogo de seções' },
+      { name: T_BILL, description: 'Planos e assinaturas mensais pelo Asaas (Pix, boleto ou cartão)' },
       { name: T_SA, description: 'Requisitos, histórias de usuário e diagramas. Projetos `software`.' },
       { name: T_DM, description: 'Metodologia CRISP-DM. Projetos `data_analysis`.' },
       { name: T_ON, description: 'Catálogo de ontologias com métricas, vocabulários, princípios e o arquivo (OWL, RDF, Turtle...). Qualquer tipo de projeto.' },

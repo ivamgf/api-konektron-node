@@ -23,9 +23,11 @@ const BPMN = `<?xml version="1.0" encoding="UTF-8"?>
   <bpmndi:BPMNDiagram id="di"/>
 </bpmn:definitions>`;
 
-test('BPM: implementado e liberado no Free', () => {
+test('BPM: implementado, nos planos Standard e Master', () => {
   assert.ok(IMPLEMENTED_SECTIONS.includes(SECTIONS.BPM));
-  assert.ok(canAccessSection({ role: 'client', plan: 'free' }, SECTIONS.BPM));
+  assert.ok(!canAccessSection({ role: 'client', plan: 'free' }, SECTIONS.BPM));
+  assert.ok(canAccessSection({ role: 'client', plan: 'standard' }, SECTIONS.BPM));
+  assert.ok(canAccessSection({ role: 'client', plan: 'master' }, SECTIONS.BPM));
 });
 
 test('leitura do BPMN: contagens, tipos e nomes', () => {
