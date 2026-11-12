@@ -263,7 +263,7 @@ assinaturas com acesso. Na troca para um plano maior, a nova cobrança vence hoj
 período pago. Uma rotina horária (em `server.js`) rebaixa quem passou de `ASAAS_TOLERANCE_DAYS` (5) de atraso ou
 chegou ao fim do período de uma assinatura cancelada, e exclui os projetos do Free sem uso há 3 meses.
 
-Configuração: `ASAAS_API_URL` (sandbox ou produção), `ASAAS_API_KEY`, `ASAAS_WEBHOOK_TOKEN` (32+ caracteres),
+Configuração: `ASAAS_API_URL` (padrão: produção, `https://api.asaas.com/v3`; sandbox só para testes), `ASAAS_API_KEY`, `ASAAS_WEBHOOK_TOKEN` (32+ caracteres),
 `ASAAS_WALLET_ID`, `ASAAS_TOLERANCE_DAYS`. Cadastre o webhook com `npm run asaas:webhook` (exige `API_URL` HTTPS
 pública). A conta Asaas pode ser a mesma de outros sistemas (ex.: Konektron Research): tudo o que esta API cria leva
 `externalReference` com o prefixo `konektron:`, e o webhook ignora (com 200) avisos de assinaturas que não são daqui.

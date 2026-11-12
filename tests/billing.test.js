@@ -94,3 +94,11 @@ test('token do webhook: comparação exata', () => {
   assert.ok(!webhookTokenMatches(undefined, token));
   assert.ok(!webhookTokenMatches(token, undefined));
 });
+
+test('chave do Asaas precisa ser do ambiente da URL', async () => {
+  const { asaasKeyMatchesUrl } = await import('#config/env.js');
+  assert.ok(asaasKeyMatchesUrl('$aact_prod_abc', 'https://api.asaas.com/v3'));
+  assert.ok(!asaasKeyMatchesUrl('$aact_prod_abc', 'https://api-sandbox.asaas.com/v3'));
+  assert.ok(asaasKeyMatchesUrl('$aact_hmlg_abc', 'https://api-sandbox.asaas.com/v3'));
+  assert.ok(!asaasKeyMatchesUrl('$aact_hmlg_abc', 'https://api.asaas.com/v3'));
+});

@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.3.1 — 2026-11-11
+
+### Alterado
+- **Asaas em produção**: `ASAAS_API_URL` passa a ter como padrão `https://api.asaas.com/v3` (o sandbox fica só para
+  testes). A API não sobe se a chave for de outro ambiente que não o da URL (`$aact_hmlg_` só no sandbox,
+  `$aact_prod_` só na produção).
+
 ## 5.3.0 — 2026-11-11
 
 ### Adicionado

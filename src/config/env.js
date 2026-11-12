@@ -8,6 +8,14 @@ try {
 
 const optionalText = z.string().trim().min(1).optional();
 
+// Chaves de API do Asaas trazem o ambiente no prefixo
+export function asaasKeyMatchesUrl(key, url) {
+  const sandboxUrl = String(url).includes('sandbox');
+  if (key.startsWith('$aact_hmlg_')) return sandboxUrl;
+  if (key.startsWith('$aact_prod_')) return !sandboxUrl;
+  return true; // formato desconhecido: o Asaas responde 401 se não servir
+}
+
 const schema = z
   .object({
     NODE_ENV: z.enum(['development', 'homologation', 'production', 'test']).default('development'),
@@ -49,7 +57,7 @@ const schema = z
     // destino das mensagens do formulário de contato (vazio: as mensagens só ficam no banco)
     CONTACT_EMAIL: z.preprocess((v) => (typeof v === 'string' && !v.trim() ? undefined : v), z.email().optional()),
     // Asaas (assinaturas Standard e Master). Sem ASAAS_API_KEY a cobrança fica desligada.
-    ASAAS_API_URL: z.url().default('https://api-sandbox.asaas.com/v3'),
+    ASAAS_API_URL: z.url().default('https://api.asaas.com/v3'), // produção; sandbox: https://api-sandbox.asaas.com/v3
     ASAAS_API_KEY: z.preprocess((v) => (typeof v === 'string' && !v.trim() ? undefined : v), z.string().trim().optional()),
     // token que o Asaas manda no header asaas-access-token dos webhooks (32 a 255 caracteres)
     ASAAS_WEBHOOK_TOKEN: z.preprocess(
@@ -65,6 +73,11 @@ const schema = z
   .refine((e) => e.DATABASE_URL || (e.DB_HOST && e.DB_NAME && e.DB_USER), {
     error: 'defina DATABASE_URL ou DB_HOST, DB_NAME e DB_USER',
     path: ['DATABASE_URL'],
+  })
+  // chave de sandbox ($aact_hmlg_) só no sandbox; chave de produção ($aact_prod_) só na produção
+  .refine((e) => !e.ASAAS_API_KEY || asaasKeyMatchesUrl(e.ASAAS_API_KEY, e.ASAAS_API_URL), {
+    error: 'a chave do Asaas não é do ambiente de ASAAS_API_URL (sandbox: $aact_hmlg_…, produção: $aact_prod_…)',
+    path: ['ASAAS_API_KEY'],
   });
 
 const parsed = schema.safeParse(process.env);
