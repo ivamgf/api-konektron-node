@@ -1,5 +1,23 @@
 # Changelog
 
+## 5.4.0 — 2026-11-12
+
+### Adicionado
+- **Master vitalício** (`users.lifetime`, migration 000025): plano Master sem cobrança, concedido só pelo administrador em
+  `PATCH /admin/users/:id` (`lifetime`). Não aparece nas páginas públicas nem em `/auth/me`. A conta vitalícia não
+  assina (409), não é rebaixada pela rotina de assinaturas e, ao receber o vitalício, tem a assinatura cancelada no Asaas.
+  O dono do sistema (`ivam.developer@gmail.com`) fica administrador, Master e vitalício.
+
+### Alterado
+- Administradores e contas vitalícias são isentos de cobrança pela mesma regra (`isExempt`).
+
+## 5.3.1 — 2026-11-11
+
+### Alterado
+- **Asaas em produção**: `ASAAS_API_URL` passa a ter como padrão `https://api.asaas.com/v3` (o sandbox fica só para
+  testes). A API não sobe se a chave for de outro ambiente que não o da URL (`$aact_hmlg_` só no sandbox,
+  `$aact_prod_` só na produção).
+
 ## 5.3.0 — 2026-11-11
 
 ### Adicionado

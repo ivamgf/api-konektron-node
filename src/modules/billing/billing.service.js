@@ -1,6 +1,6 @@
 import { env } from '#config/env.js';
 import {
-  FREE_INACTIVE_MONTHS, FREE_PROJECT_LIMIT, isMasterAdmin, PAID_PLANS, PLAN_PRICES, PLAN_SECTIONS, PLANS, planRank, ROLES,
+  FREE_INACTIVE_MONTHS, FREE_PROJECT_LIMIT, PAID_PLANS, PLAN_PRICES, PLAN_SECTIONS, PLANS, planRank, ROLES,
 } from '#config/plans.js';
 import { db } from '#database/connection.js';
 import {
@@ -29,6 +29,9 @@ export const OPEN_STATUSES = Object.freeze(['pending', 'active', 'overdue']);
 // Direito de arrependimento (CDC art. 49): 7 dias a contar do 1º pagamento, com devolução integral
 export const WITHDRAWAL_DAYS = 7;
 const DAY = 86_400_000;
+
+// Administradores e contas Master vitalícias nunca são cobrados nem rebaixados pela assinatura
+export const isExempt = (user) => user?.role === ROLES.ADMIN || Boolean(user?.lifetime);
 
 const description = (plan) => `KonekTron: plano ${PLAN_NAMES[plan]} (mensal)`;
 const toCents = (value) => Math.round(Number(value) * 100);
@@ -140,8 +143,8 @@ async function notify(userId, subject, text) {
  * definido pela administração) não são alterados.
  */
 export async function syncUserPlan(userId, now = new Date()) {
-  const user = await db('users').where({ id: userId }).whereNull('deletedAt').first('id', 'role', 'plan');
-  if (!user || user.role === ROLES.ADMIN) return user?.plan ?? null;
+  const user = await db('users').where({ id: userId }).whereNull('deletedAt').first('id', 'role', 'plan', 'lifetime');
+  if (!user || isExempt(user)) return user?.plan ?? null;
   const subs = await db('subscriptions').where({ userId }).select('plan', 'status', 'paidUntil');
   if (!subs.length) return user.plan;
   const plan = effectivePlan(subs, now);
@@ -195,7 +198,7 @@ export const billingService = {
   catalog,
 
   async overview(userId) {
-    const user = await db('users').where({ id: userId }).first('id', 'role', 'plan', 'cpfCnpj', 'projectsCreated');
+    const user = await db('users').where({ id: userId }).first('id', 'role', 'plan', 'lifetime', 'cpfCnpj', 'projectsCreated');
     const current = (await openSubscription(userId)) ?? null;
     // assinatura cancelada que ainda dá acesso (fim do período pago)
     const lastCanceled = current
@@ -212,7 +215,7 @@ export const billingService = {
     return {
       ...catalog(),
       plan: user.plan,
-      exempt: isMasterAdmin(user) || user.role === ROLES.ADMIN,
+      exempt: isExempt(user),
       cpfCnpj: user.cpfCnpj ?? null,
       current: pick(shown),
       openInvoiceUrl: invoice?.invoiceUrl ?? null,
@@ -227,7 +230,7 @@ export const billingService = {
     if (!validCpfCnpj(cpfCnpj)) throw new AppError('CPF ou CNPJ inválido', 422, { cpfCnpj: ['CPF ou CNPJ inválido'] });
     const user = await db('users').where({ id: userId }).whereNull('deletedAt').first();
     if (!user) throw AppError.notFound('Usuário');
-    if (user.role === ROLES.ADMIN) throw new AppError('Contas de administrador não são cobradas', 409);
+    if (isExempt(user)) throw new AppError('Sua conta já tem acesso total sem cobrança', 409);
 
     const current = await openSubscription(userId);
     if (current?.plan === plan) {

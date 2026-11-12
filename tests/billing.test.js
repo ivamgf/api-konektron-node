@@ -94,3 +94,20 @@ test('token do webhook: comparação exata', () => {
   assert.ok(!webhookTokenMatches(undefined, token));
   assert.ok(!webhookTokenMatches(token, undefined));
 });
+
+test('chave do Asaas precisa ser do ambiente da URL', async () => {
+  const { asaasKeyMatchesUrl } = await import('#config/env.js');
+  assert.ok(asaasKeyMatchesUrl('$aact_prod_abc', 'https://api.asaas.com/v3'));
+  assert.ok(!asaasKeyMatchesUrl('$aact_prod_abc', 'https://api-sandbox.asaas.com/v3'));
+  assert.ok(asaasKeyMatchesUrl('$aact_hmlg_abc', 'https://api-sandbox.asaas.com/v3'));
+  assert.ok(!asaasKeyMatchesUrl('$aact_hmlg_abc', 'https://api.asaas.com/v3'));
+});
+
+test('administrador e Master vitalício não são cobrados', async () => {
+  const { isExempt } = await import('#modules/billing/billing.service.js');
+  const { adminUpdateSchema } = await import('#modules/users/users.schemas.js');
+  assert.ok(isExempt({ role: 'admin', plan: 'master' }));
+  assert.ok(isExempt({ role: 'client', plan: 'master', lifetime: true }));
+  assert.ok(!isExempt({ role: 'client', plan: 'master', lifetime: false }));
+  assert.deepEqual(adminUpdateSchema.parse({ lifetime: true }), { lifetime: true });
+});
