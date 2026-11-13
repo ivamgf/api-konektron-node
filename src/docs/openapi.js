@@ -496,7 +496,7 @@ const templateSummarySchema = object({
 }, ['key', 'name', 'counts']);
 add('get', `${SA}/templates`, {
   tag: T_SA, summary: 'Listar os modelos de projeto', errors: sectionErrors,
-  description: 'Modelos com conteúdo pronto para iniciar um projeto (ex.: ERS de cadastro, autenticação e perfil).',
+  description: 'Modelos com conteúdo pronto para iniciar um projeto: ERS de cadastro, autenticação e perfil para sistema web (`ers-auth-profile`), app mobile offline/online (`ers-mobile-offline-online`), app desktop offline/online (`ers-desktop-offline-online`) e app desktop local somente offline (`ers-desktop-local-offline`).',
   response: arrayOf(templateSummarySchema),
 });
 add('post', `${SA}/templates/{templateKey}/apply`, {

@@ -1,5 +1,22 @@
 # Changelog
 
+## 5.8.0 — 2026-11-13
+
+### Adicionado
+- **Novos modelos de projeto na Análise de Sistemas** (aparecem no botão "Usar modelo" do app, junto da ERS web):
+  - `ers-mobile-offline-online` – ERS "App Mobile offline/online" (Android e iOS): app + API local + banco interno,
+    sincronizado com API Web + banco web. Modos de operação, estratégia de sincronização (fila de pendências,
+    idempotência, versão e conflitos), RF01–RF29 (com o modo On/Off), RNF01–RNF23, RD01–RD17, UC01–UC14 e 19
+    diagramas (casos de uso, classes do servidor/local/app/API, MER web e local, atividades, sequência,
+    componentes e implantação).
+  - `ers-desktop-offline-online` – a mesma estrutura para app desktop (Windows, macOS e Linux), com cofre de
+    credenciais, distribuição, atualização e diretrizes de interface próprios do desktop.
+  - `ers-desktop-local-offline` – ERS "App Desktop local, somente offline" (camada única: interface, API interna e
+    banco embarcado no mesmo executável): primeiro acesso com Administrador Local, código de recuperação no lugar do
+    e-mail, bloqueio de tela, backup/restauração criptografados, RF01–RF23, RNF01–RNF21, RD01–RD13, UC01–UC14 e 17
+    diagramas.
+- Todos os diagramas Mermaid dos modelos foram validados com o parser do Mermaid 11.
+
 ## 5.7.0 — 2026-11-12
 
 ### Adicionado
