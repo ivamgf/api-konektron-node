@@ -1,7 +1,8 @@
 import { db } from '#database/connection.js';
 import { AppError } from '#utils/AppError.js';
 import { PHASES, PHASE_KEYS } from './crispdm.constants.js';
-import { PHASE_CONTENT_SCHEMAS } from './crispdm.schemas.js';
+import { z } from 'zod';
+import { datasetSchema, PHASE_CONTENT_SCHEMAS } from './crispdm.schemas.js';
 
 const META = Object.fromEntries(PHASES.map((p) => [p.key, p]));
 const withMeta = (row) => {
@@ -113,6 +114,35 @@ export const crispdmService = {
   },
 
   // Garante que um dataset referenciado pertence ao mesmo projeto
+  /**
+   * Importa uma lista de datasets (linhas de um CSV). Tudo ou nada: qualquer linha inválida devolve 422
+   * com os erros por linha (`details.rows`, linha 1 = primeiro dataset). Nomes que já existem no projeto
+   * ou que se repetem no arquivo (sem diferenciar maiúsculas) são pulados, então reimportar não duplica.
+   */
+  async importDatasets(projectId, items) {
+    const parsed = items.map((item) => datasetSchema.safeParse(item));
+    const rows = parsed
+      .map((r, i) => (r.success ? null : { row: i + 1, errors: z.flattenError(r.error).fieldErrors }))
+      .filter(Boolean);
+    if (rows.length) throw new AppError('Há linhas inválidas no arquivo', 422, { rows });
+
+    const key = (name) => name.trim().toLowerCase();
+    return db.transaction(async (trx) => {
+      const seen = new Set((await trx('crispdm_datasets').where({ projectId }).pluck('name')).map(key));
+      const skipped = [];
+      const toInsert = [];
+      for (const { data } of parsed) {
+        if (seen.has(key(data.name))) skipped.push(data.name);
+        else {
+          seen.add(key(data.name));
+          toInsert.push({ ...data, projectId });
+        }
+      }
+      const created = toInsert.length ? await trx('crispdm_datasets').insert(toInsert).returning('*') : [];
+      return { created: created.length, skipped, datasets: created };
+    });
+  },
+
   async assertDatasetInProject(trx, projectId, datasetId) {
     if (!datasetId) return;
     const ds = await trx('crispdm_datasets').where({ id: datasetId, projectId }).first('id');

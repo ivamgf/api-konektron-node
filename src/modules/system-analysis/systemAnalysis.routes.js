@@ -3,6 +3,7 @@ import { SECTION_PROJECT_TYPE, SECTIONS } from '#config/plans.js';
 import { requireSection } from '#middlewares/authorize.js';
 import { loadProject } from '#middlewares/loadProject.js';
 import { validate } from '#middlewares/validate.js';
+import { audit } from '#services/auditLog.js';
 import { crudRouter } from '#shared/crudRouter.js';
 import * as s from './systemAnalysis.schemas.js';
 import { systemAnalysisService as svc } from './systemAnalysis.service.js';
@@ -24,6 +25,19 @@ router.get('/analysis', async (req, res) => res.json(await svc.getAnalysis(req.p
 router.patch('/analysis', validate({ body: s.analysisUpdateSchema }), async (req, res) =>
   res.json(await svc.updateAnalysis(req.project.id, req.validated.body)),
 );
+
+// ---------- Modelos de projeto (ex.: ERS de cadastro, autenticação e perfil) ----------
+router.get('/templates', (_req, res) => res.json(svc.listTemplates()));
+router.post('/templates/:templateKey/apply', validate({ params: s.templateParams }), async (req, res) => {
+  const result = await svc.applyTemplate(req.project, req.validated.params.templateKey);
+  await audit({
+    userId: req.user.id,
+    action: 'project.template',
+    description: `${req.project.id} · ${req.validated.params.templateKey}`,
+    req,
+  });
+  res.json(result);
+});
 
 // ---------- Artefatos ----------
 router.use(

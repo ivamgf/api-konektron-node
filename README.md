@@ -117,6 +117,8 @@ Projetos `software`.
 | CRUD | /requirements | filtros `?type=&status=&priority=`; `code` único no projeto (RF1, RNF7...) |
 | CRUD | /user-stories | `asA`/`iWant`/`soThat`, `requirementId` opcional; filtros `?requirementId=&status=` |
 | CRUD | /diagrams | `url` ou `source` (Mermaid, PlantUML...); filtro `?type=` |
+| GET | /templates | modelos de projeto (hoje: `ers-auth-profile`, ERS de cadastro, autenticação e perfil) |
+| POST | /templates/:templateKey/apply | aplica o modelo: preenche campos vazios da análise e cria requisitos, casos de uso e diagramas; não apaga nem duplica |
 
 ### CRISP-DM — `/projects/:projectId/crisp-dm`
 
@@ -131,6 +133,7 @@ automaticamente com o projeto.
 | PATCH | /phases/:phase (`status`, `notes`, `content`) | todas |
 | CRUD | /objectives | Business Understanding |
 | CRUD | /datasets · /datasets/:datasetId/fields | Data Understanding |
+| POST | /datasets/import (`{ datasets: [...] }`, até 1000; tudo ou nada, nomes repetidos pulados) | Data Understanding |
 | CRUD | /preparation-steps | Data Preparation |
 | CRUD | /models | Modeling |
 | CRUD | /models/:modelId/metrics | Evaluation |

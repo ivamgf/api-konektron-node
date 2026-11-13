@@ -85,6 +85,18 @@ router.use(
   }),
 );
 
+// Importação de uma lista de datasets (CSV lido no app); antes do CRUD de datasets
+router.post('/datasets/import', validate({ body: s.datasetImportSchema }), async (req, res) => {
+  const result = await svc.importDatasets(req.project.id, req.validated.body.datasets);
+  await audit({
+    userId: req.user.id,
+    action: 'crispdm.datasets_import',
+    description: `${req.project.id} · ${result.created} criado(s) · ${result.skipped.length} pulado(s)`,
+    req,
+  });
+  res.status(201).json(result);
+});
+
 router.use(
   '/datasets',
   crudRouter({

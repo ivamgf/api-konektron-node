@@ -104,6 +104,7 @@ const PATH_PARAMS = {
 const ENUM_PARAMS = {
   phase: () => toSchema(dm.phaseParams).properties.phase,
   key: () => toSchema(ck.worksheetParams).properties.key,
+  templateKey: () => toSchema(sa.templateParams).properties.templateKey,
 };
 
 // ---------- Registro das operações ----------
@@ -488,6 +489,28 @@ crud(`${SA}/diagrams`, {
     source: 'flowchart LR\n  Cliente --> A[Agendar atendimento]\n  Cliente --> B[Cancelar agendamento]',
   },
 });
+const templateCounts = object({ created: { type: 'integer' }, skipped: { type: 'integer' } }, ['created', 'skipped']);
+const templateSummarySchema = object({
+  key: { type: 'string' }, name: { type: 'string' }, description: { type: 'string' },
+  counts: object({ requirements: { type: 'integer' }, userStories: { type: 'integer' }, diagrams: { type: 'integer' } }),
+}, ['key', 'name', 'counts']);
+add('get', `${SA}/templates`, {
+  tag: T_SA, summary: 'Listar os modelos de projeto', errors: sectionErrors,
+  description: 'Modelos com conteúdo pronto para iniciar um projeto (ex.: ERS de cadastro, autenticação e perfil).',
+  response: arrayOf(templateSummarySchema),
+});
+add('post', `${SA}/templates/{templateKey}/apply`, {
+  tag: T_SA, summary: 'Aplicar um modelo ao projeto', errors: sectionErrors,
+  description:
+    'Preenche os campos vazios da análise e cria os requisitos, os casos de uso (histórias de usuário ligadas ao requisito principal) ' +
+    'e os diagramas (PlantUML/Mermaid) do modelo. Nada é apagado: códigos e títulos que já existem no projeto são pulados, ' +
+    'então aplicar de novo não duplica. `{projeto}` nos textos vira o nome do projeto.',
+  response: object({
+    template: templateSummarySchema,
+    analysis: object({ filled: arrayOf({ type: 'string' }) }),
+    requirements: templateCounts, userStories: templateCounts, diagrams: templateCounts,
+  }),
+});
 
 // ---------- CRISP-DM ----------
 const T_DM = 'CRISP-DM';
@@ -525,6 +548,21 @@ crud(`${DM}/datasets`, {
   tag: T_DM, name: 'CrispDmDataset', label: 'dataset', plural: 'datasets (Data Understanding)',
   schema: dm.datasetSchema, errors: sectionErrors,
   example: { name: 'clientes_2025', source: 'CRM', format: 'csv', rowCount: 48000, collectedAt: '2026-01-31' },
+});
+add('post', `${DM}/datasets/import`, {
+  tag: T_DM, summary: 'Importar uma lista de datasets (CSV)', status: 201, errors: sectionErrors,
+  description:
+    `O app lê o CSV (uma linha por dataset) e envia as linhas aqui, até ${dm.DATASET_IMPORT_MAX} por vez. Tudo ou nada: ` +
+    'com alguma linha inválida, responde 422 e `details.rows` traz `[{ row, errors }]` (linha 1 = primeiro dataset). ' +
+    'Nomes que já existem no projeto ou se repetem no arquivo (sem diferenciar maiúsculas) são pulados e listados em `skipped`.',
+  body: z.object({ datasets: z.array(dm.datasetSchema).min(1).max(dm.DATASET_IMPORT_MAX) }),
+  example: {
+    datasets: [
+      { name: 'clientes_2025', source: 'CRM', format: 'csv', rowCount: 48000, collectedAt: '2026-01-31' },
+      { name: 'vendas_2025', source: 'ERP', format: 'parquet', location: 's3://dados/vendas' },
+    ],
+  },
+  response: object({ created: { type: 'integer' }, skipped: arrayOf({ type: 'string' }), datasets: arrayOf(ref('CrispDmDataset')) }),
 });
 crud(`${DM}/datasets/{datasetId}/fields`, {
   tag: T_DM, name: 'CrispDmDatasetField', label: 'campo do dataset', plural: 'campos do dataset (dicionário de dados)',

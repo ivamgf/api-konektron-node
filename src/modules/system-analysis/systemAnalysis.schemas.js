@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import { longText, optText } from '#shared/schemas.js';
 import * as C from './systemAnalysis.constants.js';
+import { TEMPLATE_KEYS } from './templates/index.js';
+
+// Modelo de projeto aplicado (POST /templates/:templateKey/apply)
+export const templateParams = z.object({ templateKey: z.enum(TEMPLATE_KEYS) });
 
 // Códigos como RF1, RNF7, US12: letras maiúsculas, dígitos, ponto, hífen ou underscore
 const code = z
