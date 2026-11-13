@@ -133,6 +133,7 @@ automaticamente com o projeto.
 | PATCH | /phases/:phase (`status`, `notes`, `content`) | todas |
 | CRUD | /objectives | Business Understanding |
 | CRUD | /datasets · /datasets/:datasetId/fields | Data Understanding |
+| POST | /datasets/import (`{ datasets: [...] }`, até 1000; tudo ou nada, nomes repetidos pulados) | Data Understanding |
 | CRUD | /preparation-steps | Data Preparation |
 | CRUD | /models | Modeling |
 | CRUD | /models/:modelId/metrics | Evaluation |

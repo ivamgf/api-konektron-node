@@ -1,5 +1,13 @@
 # Changelog
 
+## 5.7.0 — 2026-11-12
+
+### Adicionado
+- **Importação de datasets (CRISP-DM)**: `POST /projects/:id/crisp-dm/datasets/import` com `{ datasets: [...] }` (até
+  1000), usado pelo app ao ler um CSV. Tudo ou nada: com alguma linha inválida responde 422 e `details.rows` traz
+  `[{ row, errors }]`. Nomes que já existem no projeto ou se repetem no arquivo (sem diferenciar maiúsculas) são
+  pulados e voltam em `skipped`, então reimportar não duplica. Registro `crispdm.datasets_import` na auditoria.
+
 ## 5.6.0 — 2026-11-12
 
 ### Adicionado

@@ -44,6 +44,16 @@ export const datasetSchema = z.object({
   qualityNotes: longText(),
 });
 
+// Importação em lote (linhas de um CSV lido no app): cada item é validado com datasetSchema no serviço,
+// para devolver o erro com o número da linha
+export const DATASET_IMPORT_MAX = 1000;
+export const datasetImportSchema = z.object({
+  datasets: z
+    .array(z.record(z.string(), z.unknown()))
+    .min(1, { error: 'Envie ao menos um dataset' })
+    .max(DATASET_IMPORT_MAX, { error: `Até ${DATASET_IMPORT_MAX} datasets por importação` }),
+});
+
 export const datasetFieldSchema = z.object({
   name: z.string().trim().min(1).max(200),
   dataType: z.enum(C.FIELD_DATA_TYPES),

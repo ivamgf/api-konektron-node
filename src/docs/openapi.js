@@ -549,6 +549,21 @@ crud(`${DM}/datasets`, {
   schema: dm.datasetSchema, errors: sectionErrors,
   example: { name: 'clientes_2025', source: 'CRM', format: 'csv', rowCount: 48000, collectedAt: '2026-01-31' },
 });
+add('post', `${DM}/datasets/import`, {
+  tag: T_DM, summary: 'Importar uma lista de datasets (CSV)', status: 201, errors: sectionErrors,
+  description:
+    `O app lê o CSV (uma linha por dataset) e envia as linhas aqui, até ${dm.DATASET_IMPORT_MAX} por vez. Tudo ou nada: ` +
+    'com alguma linha inválida, responde 422 e `details.rows` traz `[{ row, errors }]` (linha 1 = primeiro dataset). ' +
+    'Nomes que já existem no projeto ou se repetem no arquivo (sem diferenciar maiúsculas) são pulados e listados em `skipped`.',
+  body: z.object({ datasets: z.array(dm.datasetSchema).min(1).max(dm.DATASET_IMPORT_MAX) }),
+  example: {
+    datasets: [
+      { name: 'clientes_2025', source: 'CRM', format: 'csv', rowCount: 48000, collectedAt: '2026-01-31' },
+      { name: 'vendas_2025', source: 'ERP', format: 'parquet', location: 's3://dados/vendas' },
+    ],
+  },
+  response: object({ created: { type: 'integer' }, skipped: arrayOf({ type: 'string' }), datasets: arrayOf(ref('CrispDmDataset')) }),
+});
 crud(`${DM}/datasets/{datasetId}/fields`, {
   tag: T_DM, name: 'CrispDmDatasetField', label: 'campo do dataset', plural: 'campos do dataset (dicionário de dados)',
   schema: dm.datasetFieldSchema, errors: sectionErrors,
