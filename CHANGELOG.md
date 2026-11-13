@@ -1,5 +1,17 @@
 # Changelog
 
+## 5.6.0 — 2026-11-12
+
+### Adicionado
+- **Modelos de projeto na Análise de Sistemas**: `GET /projects/:id/system-analysis/templates` e
+  `POST /projects/:id/system-analysis/templates/:templateKey/apply`. O primeiro modelo, `ers-auth-profile`, é a ERS
+  "Cadastro, Autenticação e Perfil de Usuário" (ISO/IEC/IEEE 29148 e IEEE 830): objetivo, escopo, descrição técnica e
+  observações; RF01–RF20, RNF01–RNF19 e RD01–RD11; UC01–UC10 como histórias de usuário ligadas ao requisito
+  principal; e 14 diagramas (casos de uso e componentes em PlantUML; classes, MER conceitual e lógico, atividades e
+  sequência em Mermaid). Aplicar não apaga nada: só os campos vazios da análise são preenchidos e códigos/títulos que
+  já existem são pulados, então reaplicar não duplica. `{projeto}` nos textos vira o nome do projeto. Registro
+  `project.template` na auditoria.
+
 ## 5.5.0 — 2026-11-12
 
 ### Alterado

@@ -104,6 +104,7 @@ const PATH_PARAMS = {
 const ENUM_PARAMS = {
   phase: () => toSchema(dm.phaseParams).properties.phase,
   key: () => toSchema(ck.worksheetParams).properties.key,
+  templateKey: () => toSchema(sa.templateParams).properties.templateKey,
 };
 
 // ---------- Registro das operações ----------
@@ -487,6 +488,28 @@ crud(`${SA}/diagrams`, {
     title: 'Casos de uso — Agendamento', type: 'use_case', notation: 'mermaid',
     source: 'flowchart LR\n  Cliente --> A[Agendar atendimento]\n  Cliente --> B[Cancelar agendamento]',
   },
+});
+const templateCounts = object({ created: { type: 'integer' }, skipped: { type: 'integer' } }, ['created', 'skipped']);
+const templateSummarySchema = object({
+  key: { type: 'string' }, name: { type: 'string' }, description: { type: 'string' },
+  counts: object({ requirements: { type: 'integer' }, userStories: { type: 'integer' }, diagrams: { type: 'integer' } }),
+}, ['key', 'name', 'counts']);
+add('get', `${SA}/templates`, {
+  tag: T_SA, summary: 'Listar os modelos de projeto', errors: sectionErrors,
+  description: 'Modelos com conteúdo pronto para iniciar um projeto (ex.: ERS de cadastro, autenticação e perfil).',
+  response: arrayOf(templateSummarySchema),
+});
+add('post', `${SA}/templates/{templateKey}/apply`, {
+  tag: T_SA, summary: 'Aplicar um modelo ao projeto', errors: sectionErrors,
+  description:
+    'Preenche os campos vazios da análise e cria os requisitos, os casos de uso (histórias de usuário ligadas ao requisito principal) ' +
+    'e os diagramas (PlantUML/Mermaid) do modelo. Nada é apagado: códigos e títulos que já existem no projeto são pulados, ' +
+    'então aplicar de novo não duplica. `{projeto}` nos textos vira o nome do projeto.',
+  response: object({
+    template: templateSummarySchema,
+    analysis: object({ filled: arrayOf({ type: 'string' }) }),
+    requirements: templateCounts, userStories: templateCounts, diagrams: templateCounts,
+  }),
 });
 
 // ---------- CRISP-DM ----------

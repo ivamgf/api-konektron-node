@@ -1,5 +1,6 @@
 import { db } from '#database/connection.js';
 import { AppError } from '#utils/AppError.js';
+import { TEMPLATES, templateSummary } from './templates/index.js';
 
 const ANALYSIS_FIELDS = ['goal', 'scope', 'technicalDescription', 'notes'];
 const EMPTY_ANALYSIS = Object.fromEntries(ANALYSIS_FIELDS.map((f) => [f, null]));
@@ -79,6 +80,67 @@ export const systemAnalysisService = {
       userStories,
       diagrams,
     };
+  },
+
+  listTemplates() {
+    return Object.values(TEMPLATES).map(templateSummary);
+  },
+
+  /**
+   * Aplica um modelo ao projeto sem apagar nada: preenche só os campos vazios da análise e cria os
+   * requisitos e histórias com códigos ainda livres e os diagramas com títulos ainda livres. Aplicar
+   * de novo não duplica. As histórias ficam ligadas aos requisitos do projeto pelo código.
+   */
+  async applyTemplate(project, key) {
+    const tpl = TEMPLATES[key];
+    if (!tpl) throw AppError.notFound('Modelo');
+    const projectId = project.id;
+    const fill = (text) => (text == null ? text : text.replaceAll('{projeto}', () => project.name)); // função: "$&" no nome não vira padrão
+    const tally = (total, created) => ({ created, skipped: total - created });
+
+    return db.transaction(async (trx) => {
+      // Análise: o que a pessoa já escreveu fica
+      const current = await trx('system_analyses').where({ projectId }).first(...ANALYSIS_FIELDS);
+      const analysis = Object.fromEntries(
+        ANALYSIS_FIELDS.filter((f) => tpl.analysis[f] && !current?.[f]?.trim()).map((f) => [f, fill(tpl.analysis[f])]),
+      );
+      if (Object.keys(analysis).length) {
+        await trx('system_analyses').insert({ projectId, ...analysis }).onConflict('projectId').merge(Object.keys(analysis));
+      }
+
+      // Requisitos (código único no projeto)
+      const reqIds = new Map(
+        (await trx('requirements').where({ projectId }).select('id', 'code')).map((r) => [r.code, r.id]),
+      );
+      const newReqs = tpl.requirements
+        .filter((r) => !reqIds.has(r.code))
+        .map((r) => ({ ...r, description: fill(r.description), projectId }));
+      if (newReqs.length) {
+        for (const r of await trx('requirements').insert(newReqs).returning(['id', 'code'])) reqIds.set(r.code, r.id);
+      }
+
+      // Histórias / casos de uso (código único no projeto)
+      const storyCodes = new Set(await trx('user_stories').where({ projectId }).pluck('code'));
+      const newStories = tpl.userStories
+        .filter((s) => !storyCodes.has(s.code))
+        .map(({ requirementCode, ...s }) => ({ ...s, requirementId: reqIds.get(requirementCode) ?? null, projectId }));
+      if (newStories.length) await trx('user_stories').insert(newStories);
+
+      // Diagramas (pelo título)
+      const titles = new Set(await trx('diagrams').where({ projectId }).pluck('title'));
+      const newDiagrams = tpl.diagrams
+        .filter((d) => !titles.has(d.title))
+        .map((d) => ({ ...d, description: fill(d.description), projectId }));
+      if (newDiagrams.length) await trx('diagrams').insert(newDiagrams);
+
+      return {
+        template: templateSummary(tpl),
+        analysis: { filled: Object.keys(analysis) },
+        requirements: tally(tpl.requirements.length, newReqs.length),
+        userStories: tally(tpl.userStories.length, newStories.length),
+        diagrams: tally(tpl.diagrams.length, newDiagrams.length),
+      };
+    });
   },
 
   // Garante que um requisito referenciado pertence ao mesmo projeto
